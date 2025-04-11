@@ -15,27 +15,13 @@ from dotenv import load_dotenv  # python-dotenv
 import simplejson as json  # simplejson
 from discord import app_commands
 
+# 自作ライブラリ
+from server import keep_alive
 
 load_dotenv()  # .env読み込み
+keep_alive()  # Webサーバー起動
 
 intents = discord.Intents.default()
-intents.typing = True
-intents.message_content = True
-intents.dm_messages = True
-intents.dm_reactions = True
-intents.dm_typing = True
-intents.invites = True
-intents.guild_messages = True
-intents.guild_reactions = True
-intents.guild_scheduled_events = True
-intents.guild_typing = True
-intents.webhooks = True
-intents.auto_moderation_configuration = True
-intents.auto_moderation_execution = True
-intents.integrations = True
-
-# ただし、Presence Intent だけは False にしておく
-intents.presences = False
 intents.message_content = True # (特権) メッセージインテント
 intents.members = True # (特権) メンバーインテント
 
@@ -56,47 +42,86 @@ bot.VERSION = os.getenv("VERSION")
 bot.OWNER_NAME = os.getenv("OWNER_NAME")
 bot.SUPPORT_SERVER = os.getenv("SUPPORT_SERVER")
 
-# json系
-with open("data/status.json", "r", encoding="UTF-8") as f:
-    s_data = json.load(f)
-
-bot.COMMAND_COUNT = s_data["command_count"] # コマンド数
+# 読み込むCogのリスト
+EXTENSIONS = [
+    'cogs.database_manager',
+    'cogs.system',
+    'cogs.fun',
+    'cogs.shikanoko',
+    'cogs.scratch',
+    'cogs.user',
+    'cogs.youtube',
+    'cogs.guild',
+    'cogs.delete',
+    'cogs.nijigen',
+    'cogs.useful',
+    'cogs.web',
+    'cogs.akane-talks',
+    'cogs.akane-ai',
+    'cogs.money',
+    'cogs.settings',
+    'cogs.jppost',
+    'cogs.gamble',
+    'cogs.ranking',
+    'cogs.pokepoke'
+]
 
 ##################################################
-
-# ステータスリストをcycleで生成
-with open("data/status.json", "r", encoding="UTF-8") as f:
-    data = json.load(f)
-
-# STATUS_LIST = cycle(["❓/help", f"{data['bot_guilds']:,} Servers", f"{data['bot_members']:,} Users", f"Version {bot.VERSION}"])
-STATUS_LIST = cycle(["❓/help", f"{data['bot_guilds']:,} Servers", f"Version {bot.VERSION}"])
-
-# DB操作
-bot.money_db_connection = sqlite3.connect("data/money.db") # money.dbの接続を作成
-bot.settings_db_connection = sqlite3.connect("data/settings.db") # settings.dbの接続を作成
-
 
 # 起動通知
 @bot.event
 async def on_ready():
+    global STATUS_LIST
+
     print("[Akane] ログインしました")
     start_time = time.time() # 起動タイムを計測
     bot_guilds = len(bot.guilds)
     # bot_members = bot.users
-
-    # jsonにこの情報を出力しておく
-    with open("data/status.json", "r", encoding="UTF-8") as f:
-        s_data = json.load(f)
-
-    s_data["bot_guilds"] = bot_guilds
-    # s_data["bot_members"] = bot_members
     bot_members = 0
-    # s_data["bot_realmembers"] = list(set(bot_members))
 
-    # データの保存
-    with open("data/status.json", "w", encoding="UTF-8") as f:
-        json.dump(s_data, f)
+    # database_manager呼び出し
+    dbm = bot.get_cog("DatabaseManager")
 
+    if dbm:
+        # DBが生きていれば処理
+        if await dbm.check_db():
+            # 設定更新
+            async with dbm.pool.acquire() as conn:
+                async with conn.transaction():
+                    try:
+                        await conn.execute("""
+                            UPDATE bot_data
+                            SET value = $1
+                            WHERE name = 'guilds'
+                        """, str(bot_guilds))
+                        
+                        await conn.execute("""
+                            UPDATE bot_data
+                            SET value = $1
+                            WHERE name = 'members'
+                        """, str(bot_members))
+
+                    except Exception as e:
+                        print(f"[Error] main: {e}")
+
+            # 設定読み出し
+            async with dbm.pool.acquire() as conn:
+                try:
+                    bot.COMMANDS_COUNT = await conn.fetchval("""
+                        SELECT value FROM bot_data WHERE name = 'commands_count'
+                    """)
+
+                except Exception as e:
+                    print(f"[Error] main: {e}")
+
+        else:
+            print("[Error] main: Database isn't available")
+
+    else:
+        print("[Error] main: Can't load 'database_manager'")
+
+    # ステータスリストをcycleで生成
+    STATUS_LIST = cycle(["❓/help", f"{bot_guilds:,} Servers", f"Version {bot.VERSION}"])
     activity = discord.CustomActivity(name="✅ 起動完了")
     await bot.change_presence(activity=activity)
 
@@ -115,9 +140,10 @@ async def on_ready():
     except Exception:
         pass
 
-    # 10秒後からステータス変更開始
-    await asyncio.sleep(10)
+    # 5秒後からステータス変更とサーバー数更新開始
+    await asyncio.sleep(5)
     change_activity.start()
+    update_guilds_count.start()
 
 
 # Activity自動変更
@@ -126,17 +152,26 @@ async def change_activity():
     activity = discord.CustomActivity(name=next(STATUS_LIST))
     await bot.change_presence(activity=activity)
 
+# サーバー数自動更新 (更新するとcycleは先頭に戻る)
+@tasks.loop(minutes=60)
+async def update_guilds_count():
+    global STATUS_LIST
+
+    bot_guilds = len(bot.guilds)
+    STATUS_LIST = cycle(["❓/help", f"{bot_guilds:,} Servers", f"Version {bot.VERSION}"])
+
 
 ##################################################
 
 ''' 管理者用コマンド '''
 
 
-# devhelp
-@bot.command(name="devhelp")
+# help
+@bot.command(name="help")
 @commands.is_owner()
 async def devhelp(ctx):
-    desc = "```Akane 管理者用コマンドリスト```\n**管理コマンド**\n`sync`, `devsync`, `stop`, `give`, `givexp` `resetwork`, `resetlogin`"
+    desc = "```Akane 管理者用コマンドリスト```\n" \
+         + "**管理コマンド**\n`help`, `sync`, `devsync`, `reload`, `stop`, `give`, `givexp` `resetwork`, `resetlogin`"
     embed = discord.Embed(title="📖コマンドリスト", description=desc)
     await ctx.reply(embed=embed, mention_author=False)
 
@@ -156,15 +191,24 @@ async def sync(ctx):
         await ctx.reply(embed=embed, mention_author=False)
 
     else:
-        # jsonにこの情報を出力しておく
-        with open("data/status.json", "r", encoding="UTF-8") as f:
-            s_data = json.load(f)
+        # DBにこの情報を出力しておく
+        dbm = bot.get_cog("DatabaseManager")
 
-        s_data["command_count"] = len(synced)
+        if dbm:
+            # DBが生きていれば処理
+            if await dbm.check_db():
+                # 設定更新
+                async with dbm.pool.acquire() as conn:
+                    async with conn.transaction():
+                        try:
+                            await conn.execute("""
+                                UPDATE bot_data
+                                SET value = $1
+                                WHERE name = 'commands_count'
+                            """, str(len(synced)))
 
-        # データの保存
-        with open("data/status.json", "w", encoding="UTF-8") as f:
-            json.dump(s_data, f)
+                        except Exception as e:
+                            print(f"Error: {e}")
         
         embed = discord.Embed(title=":white_check_mark: 成功",
                               description=f"{len(synced)}コマンドをSyncしました",
@@ -193,6 +237,28 @@ async def devsync(ctx):
         await ctx.reply(embed=embed, mention_author=False)
 
 
+# reload
+@bot.command(name="reload")
+@commands.is_owner()
+async def reload(ctx):
+    try:
+        for extention in EXTENSIONS:
+            await bot.load_extension(extension)
+
+    except Exception as e:
+        embed = discord.Embed(title=":x: エラー",
+                              description="コマンドのSyncに失敗しました",
+                              color=0xff0000)
+        embed.add_field(name="エラー内容", value=e)
+        await ctx.reply(embed=embed, mention_author=False)
+        
+    else:
+        embed = discord.Embed(title=":white_check_mark: 成功",
+                              description=f"{len(EXTENSIONS)}個のCogをリロードしました",
+                              color=discord.Colour.green())
+        await ctx.reply(embed=embed, mention_author=False)
+
+
 # stop
 @bot.command(name="stop")
 @commands.is_owner()
@@ -213,7 +279,16 @@ async def stop(ctx):
 async def on_interaction(ctx: discord.Interaction):
     try:
         if ctx.data['component_type'] == 2:
-            await on_button_click(ctx)
+            if "hit" in ctx.data["custom_id"] or "stand" in ctx.data["custom_id"]:
+                # blackjack
+                gamble_cog = bot.get_cog('Gamble')
+
+                if gamble_cog:
+                    await gamble_cog.blackjack_button_click(ctx)
+
+            else:
+                # janken
+                await janken_button_click(ctx)
 
         # elif inter.data['component_type'] == 3:
         #     await on_dropdown(inter)
@@ -222,8 +297,8 @@ async def on_interaction(ctx: discord.Interaction):
         pass
 
 
-# Buttonの処理
-async def on_button_click(ctx: discord.Interaction):
+# janken Buttonの処理
+async def janken_button_click(ctx: discord.Interaction):
     custom_id = ctx.data["custom_id"]
 
     if custom_id == "j_g":
@@ -265,30 +340,9 @@ async def on_button_click(ctx: discord.Interaction):
 
 ##################################################
 
-# 読み込むCogのリスト
-INITIAL_EXTENSIONS = [
-    'cogs.system',
-    'cogs.fun',
-    'cogs.shikanoko',
-    'cogs.scratch',
-    'cogs.user',
-    'cogs.youtube',
-    'cogs.guild',
-    'cogs.delete',
-    'cogs.nijigen',
-    'cogs.useful',
-    'cogs.web',
-    'cogs.akane-talks',
-    'cogs.akane-ai',
-    'cogs.money',
-    'cogs.settings',
-    'cogs.jppost'
-]
-
-
 # Cog読み込み
 async def load_extension():
-    for cog in INITIAL_EXTENSIONS:
+    for cog in EXTENSIONS:
         await bot.load_extension(cog)
 
 
@@ -311,5 +365,3 @@ async def on_command_error(ctx: commands.Context, error):
         await ctx.send(":x: 権限がありません", ephemeral=True)  # 権限を持たずにコマンドを実行した際に警告する
 
 asyncio.run(main())
-
-print("CRASH!")

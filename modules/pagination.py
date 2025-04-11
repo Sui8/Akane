@@ -18,16 +18,16 @@ class Pagination(discord.ui.View):
                 description=":x: コマンドの実行者のみ使用できます",
                 color=16711680
             )
-            await interaction.response.send_message(embed=emb, ephemeral=True)
+            await interaction.followup.send(embed=emb, ephemeral=True)
             return False
 
     async def navegate(self):
         emb, self.total_pages = await self.get_page(self.index)
         if self.total_pages == 1:
-            await self.interaction.response.send_message(embed=emb)
+            await self.interaction.followup.send(embed=emb)
         elif self.total_pages > 1:
             self.update_buttons()
-            await self.interaction.response.send_message(embed=emb, view=self)
+            await self.interaction.followup.send(embed=emb, view=self)
 
     async def edit_page(self, interaction: discord.Interaction):
         emb, self.total_pages = await self.get_page(self.index)

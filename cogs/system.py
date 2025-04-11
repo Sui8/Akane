@@ -15,6 +15,8 @@ import simplejson as json  # simplejson
 
 # 自作モジュール
 from modules.pagination import Pagination
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
 
 
 load_dotenv()  # .env読み込み
@@ -33,13 +35,22 @@ VERSION = os.getenv("VERSION")
 class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        print("SystemCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("system: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("system: Database is not ready")
+
+        #############################
+
+        print("system: ready")
 
     #########################
 
@@ -47,7 +58,16 @@ class System(commands.Cog):
 
     @app_commands.command(name="help", description="Akaneのコマンド一覧を表示します")
     @app_commands.describe(command="指定したコマンドの説明を表示します")
+    @ephemeral_check
+    @restrict_check
     async def help(self, ctx: discord.Interaction, command: str = None):
+        await ctx.response.defer()
+
+        ephemeral = ctx.extras.get('ephemeral', False)
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         with open("data/commands.json", encoding="UTF-8") as f:
             commands = json.load(f)
@@ -70,10 +90,12 @@ class System(commands.Cog):
                 embed.add_field(name="説明",
                                 value=f"```{help_info}```", inline=False)
                 embed.set_footer(text="<> : 必要引数 | [] : オプション引数")
-                await ctx.response.send_message(embed=embed, ephemeral=True)
+                await ctx.followup.send(embed=embed, ephemeral=True)
+                await self.dbm.log_command(ctx.user.id, "help", command, ctx.guild.id if ctx.guild else None, result="Success")
 
             else:
-                await ctx.response.send_message(":x: そのコマンドは存在しません", ephemeral=True)
+                await send_error(ctx, None, "指定されたコマンドは存在しません", None, is_followup=True)
+                await self.dbm.log_command(ctx.user.id, "help", command, ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
 
         else:
             async def get_page(page: int):
@@ -91,58 +113,56 @@ class System(commands.Cog):
                 return embed, n
 
             await Pagination(ctx, get_page).navegate()
+            await self.dbm.log_command(ctx.user.id, "help", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     # ping
 
     @app_commands.command(name="ping", description="AkaneのPingを確認します")
+    @ephemeral_check
+    @restrict_check
     async def ping(self, ctx: discord.Interaction):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+        await ctx.response.defer()
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-        else:
-            ephemeral = 0
-
-        #####
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         embed = discord.Embed(title="Pong!",
                               description=f"`{round(self.bot.latency * 1000, 2)}ms`",
                               color=0xc8ff00)
-        await ctx.response.send_message(embed=embed, ephemeral=ephemeral)
+        await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "ping", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     # stats
 
     @app_commands.command(name="stats", description="Akaneのステータスを表示します")
     @app_commands.checks.cooldown(2, 30)
+    @ephemeral_check
     async def stats(self, ctx: discord.Interaction):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
-
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
-
-        else:
-            ephemeral = 0
-
-        #####
-
         await ctx.response.defer()
 
+        ephemeral = ctx.extras.get('ephemeral', False)
+
+        async with self.dbm.pool.acquire() as conn:
+            COMMAND_COUNT = await conn.fetchval("""
+                SELECT value
+                FROM bot_data
+                WHERE name = $1
+            """, "command_count")
+
         embed = discord.Embed(title="ステータス",
-                              description="",
-                              color=0xc8ff00)
+                            description="",
+                            color=0xc8ff00)
         embed.add_field(name=":robot: 統計", value=f"サーバー数: **{len(self.bot.guilds):,}**\nユーザー数: **調整中**")
         embed.add_field(name=":pencil: Botの情報", value=
                         f"開発者: **{self.bot.OWNER_NAME}**\n"
                         f"バージョン: **{self.bot.VERSION}**\n"
-                        f"総コード長: **調整中**\nコマンド数: **{self.bot.COMMAND_COUNT:,}**")
+                        f"コマンド数: **{int(COMMAND_COUNT):,}**")
         embed.add_field(name=":desktop: サーバー情報", value=
                         f"CPU使用率: **{psutil.cpu_percent(interval=1)}% "
-                        f"({round(psutil.cpu_freq().current / 1000, 2)}GHz / {psutil.sensors_temperatures()['coretemp'][0].current}℃)**\n"
+                        f"({round(psutil.cpu_freq().current / 1000, 2)}GHz)**\n"
                         f"メモリ使用率: **{psutil.virtual_memory().percent}% "
                         f"({round(psutil.virtual_memory().used / 1024 ** 3, 1)}/"
                         f"{round(psutil.virtual_memory().total / 1024 ** 3, 1)}GB)**\n"
@@ -152,22 +172,21 @@ class System(commands.Cog):
                         f"カーネル: **Linux {platform.release()}**")
         embed.set_footer(text=f"データ取得時刻: {datetime.datetime.now(ZoneInfo('Asia/Tokyo')).strftime('%Y/%m/%d %H:%M:%S')}")
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "stats", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     # invite
 
-    @app_commands.command(name="invite", description="Akaneの招待リンクを表示します")
+    @app_commands.command(name="invite", description="Botの招待リンクを表示します")
+    @ephemeral_check
+    @restrict_check
     async def invite(self, ctx: discord.Interaction):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+        await ctx.response.defer()
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-        else:
-            ephemeral = 0
-
-        #####
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         button = discord.ui.Button(label="招待する", style=discord.ButtonStyle.link,
                                    url="https://discord.com/oauth2/authorize?client_id=777557090562474044")
@@ -176,26 +195,26 @@ class System(commands.Cog):
                               color=0xdda0dd)
         view = discord.ui.View()
         view.add_item(button)
-        await ctx.response.send_message(embed=embed, view=view, ephemeral=ephemeral)
+        await ctx.followup.send(embed=embed, view=view, ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "invite", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     # support
 
     @app_commands.command(name="support", description="サポートサーバーの招待リンクを表示します")
+    @ephemeral_check
+    @restrict_check
     async def support(self, ctx: discord.Interaction):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+        await ctx.response.defer()
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-        else:
-            ephemeral = 0
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
-        #####
-
-        await ctx.response.send_message("__**サポートサーバー**__\nお問い合わせ・バグ報告・アップデート情報はこちらで配信しています。\n"
+        await ctx.followup.send("__**サポートサーバー**__\nお問い合わせ・バグ報告・アップデート情報はこちらで配信しています。\n"
                                         f"以下のリンクより参加できます。\n{self.bot.SUPPORT_SERVER}", ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "support", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     #########################
 

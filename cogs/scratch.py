@@ -4,6 +4,10 @@ from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
 import scratchattach as scratch3  # scratchattach
 
+# 自作モジュール
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
+
 
 ##################################################
 
@@ -13,48 +17,51 @@ import scratchattach as scratch3  # scratchattach
 class Scratch(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
 
     # Cog読み込み時
 
     @commands.Cog.listener()
     async def on_ready(self):
-        print("ScratchCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("scratch: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("scratch: Database is not ready")
+
+        #############################
+
+        print("scratch: Ready")
 
     #########################
 
     # /scratchコマンドをグループ化
     group = app_commands.Group(name="scratch", description="Scratch関係のコマンド")
 
-    # userinfo
+    # user
 
-    @group.command(name="userinfo", description="Scratchのユーザー情報を取得します")
+    @group.command(name="user", description="Scratchのユーザー情報を取得します")
     @app_commands.checks.cooldown(2, 10)
     @app_commands.describe(user="ユーザー名")
-    async def scratch_userinfo(self, ctx: discord.Interaction, user: str):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
-
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
-
-        else:
-            ephemeral = 0
-
-        #####
+    @ephemeral_check
+    @restrict_check
+    async def scratch_user(self, ctx: discord.Interaction, user: app_commands.Range[str, 1, 25]):
+        ephemeral = ctx.extras.get('ephemeral', False)
 
         await ctx.response.defer()
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         try:
             user = scratch3.get_user(user)
 
         except Exception:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="そのユーザーを取得できませんでした",
-                                  color=0xff0000)
-            await ctx.followup.send(embed=embed, ephemeral=True)
+            await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "scratch user", user, ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
 
         else:
             if user.scratchteam:
@@ -101,6 +108,7 @@ class Scratch(commands.Cog):
             embed.set_footer(text=f"アカウント作成日時: {jd[:4]}/{jd[5:7]}/{jd[8:10]} {jd[11:19]}")
 
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+            await self.dbm.log_command(ctx.user.id, "scratch user", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     # ff
 
@@ -112,29 +120,23 @@ class Scratch(commands.Cog):
     @app_commands.choices(mode=[
         discord.app_commands.Choice(name="following", value="following"),
         discord.app_commands.Choice(name="follower", value="follower"),])
-    async def scratch_ff(self, ctx: discord.Interaction, mode: str, target: str, user: str):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
-
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
-
-        else:
-            ephemeral = 0
-
-        #####
+    @ephemeral_check
+    @restrict_check
+    async def scratch_ff(self, ctx: discord.Interaction, mode: str, target: app_commands.Range[str, 1, 25], user: app_commands.Range[str, 1, 25]):
+        ephemeral = ctx.extras.get('ephemeral', False)
 
         await ctx.response.defer()
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         try:
             us = scratch3.get_user(target)
 
         except Exception:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="ユーザーを取得できませんでした",
-                                  color=0xff0000)
-            await ctx.followup.send(embed=embed, ephemeral=True)
+            await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
 
         else:
             if mode == "following":
@@ -142,10 +144,9 @@ class Scratch(commands.Cog):
                     data = us.is_following(user)
 
                 except Exception:
-                    embed = discord.Embed(title=":x: エラー",
-                                          description="ユーザーを取得できませんでした",
-                                          color=0xff0000)
-                    await ctx.followup.send(embed=embed, ephemeral=True)
+                    await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
+                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
+
 
                 else:
                     if data:
@@ -158,16 +159,16 @@ class Scratch(commands.Cog):
                                           description=f"`@{target}`は`@{user}`を**フォロー{status}**",
                                           color=discord.Colour.green())
                     await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Success")
 
             if mode == "follower":
                 try:
                     data = us.is_followed_by(user)
 
                 except Exception:
-                    embed = discord.Embed(title=":x: エラー",
-                                          description="ユーザーを取得できませんでした",
-                                          color=0xff0000)
-                    await ctx.followup.send(embed=embed, ephemeral=True)
+                    await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
+                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
+
 
                 else:
                     if data:
@@ -180,13 +181,14 @@ class Scratch(commands.Cog):
                                           description=f"`@{target}`は`@{user}`に**フォロー{status}**",
                                           color=discord.Colour.green())
                     await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Success")
 
     #########################
 
     ''' クールダウン '''
 
-    @scratch_userinfo.error
-    async def userinfo_on_command_error(self, ctx: discord.Interaction, error: app_commands.AppCommandError):
+    @scratch_user.error
+    async def user_on_command_error(self, ctx: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.checks.CommandOnCooldown):
             retry_after_int = int(error.retry_after)
             retry_minute = retry_after_int // 60

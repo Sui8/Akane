@@ -1,13 +1,6 @@
-__pycache__
+__pycache__/
+.venv/
 *.env
-test.png
-card.png
-icon.png
-qr.png
 run.sh
-yomi.mp3
-.others
-data/ai
-data/quiz
-data/quiz.txt
-data/fxtwitter.txt
+.others/
+data/

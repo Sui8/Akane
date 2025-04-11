@@ -1,8 +1,16 @@
+# 組み込みライブラリ
+import string
+import random
+
 # 外部ライブラリ
 import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Frameworkをインポート
 import qrcode  # qrcode
+
+# 自作モジュール
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
 
 
 ##################################################
@@ -37,24 +45,19 @@ class QRCode(discord.ui.Modal, title='QRコード作成'):
             file = discord.File(fp="qr.png", filename="qr.png", spoiler=False)
 
         except Exception:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="作成に失敗しました。文字列を短くするか、変更してください。",
-                                  color=0xff0000)
-            await ctx.response.send_message(embed=embed, ephemeral=True)
+            await send_error(ctx, None, "QRコードの作成に失敗しました。文字列を短くするか、変更してください。", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "qr", None, ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
 
         else:
             embed = discord.Embed(title="QRコード")
             embed.set_image(url="attachment://qr.png")
-            await ctx.response.send_message(
-                file=file, embed=embed, ephemeral=False)
+            await ctx.response.send_message(file=file, embed=embed, ephemeral=False)
+            await self.dbm.log_command(ctx.user.id, "qr", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     async def on_error(
             self, ctx: discord.Interaction, error: Exception) -> None:
-        embed = discord.Embed(title=":x: エラー",
-                              description="作成に失敗しました。文字列を短くするか、変更してください。",
-                              color=0xff0000)
-        await ctx.response.send_message(embed=embed, ephemeral=True)
-        print(error)
+        await send_error(ctx, None, "QRコードの作成に失敗しました。文字列を短くするか、変更してください。", None, is_followup=True)
+        await self.dbm.log_command(ctx.user.id, "qr", None, ctx.guild.id if ctx.guild else None, result=f"Failed ({error})")
 
 ##################################################
 
@@ -64,21 +67,36 @@ class QRCode(discord.ui.Modal, title='QRコード作成'):
 class Useful(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
+
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        print("UsefulCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("useful: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("useful: Database is not ready")
+
+        #############################
+
+        print("useful: ready")
 
     #########################
 
     # QRCode
 
     @app_commands.command(name="qr", description="QRコードを作成します")
-    @app_commands.checks.cooldown(2, 15)
+    @app_commands.checks.cooldown(1, 5)
+    @restrict_check
     async def qr(self, ctx: discord.Interaction):
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=False)
+            return
+
         await ctx.response.send_modal(QRCode())
 
     # text
@@ -97,7 +115,14 @@ class Useful(commands.Cog):
         discord.app_commands.Choice(name="𝓒𝓾𝓻𝓼𝓲𝓿𝓮 𝓢𝓬𝓻𝓲𝓹𝓽 (𝓑𝓸𝓵𝓭)", value="cursivebold"),
         discord.app_commands.Choice(name="𝔉𝔯𝔞𝔨𝔱𝔲𝔯", value="fraktur"),
         discord.app_commands.Choice(name="𝕱𝖗𝖆𝖐𝖙𝖚𝖗 (𝕭𝖔𝖑𝖉)", value="frakturbold")])
+    @restrict_check
     async def text(self, ctx: discord.Interaction, txt_type: str, text: str):
+        await ctx.response.defer(ephemeral=True)
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
+
         # Unicodeの開始ポイント
         unicode_styles = {
             "bold": (0x1D41A, 0x1D400),  # 太字
@@ -123,7 +148,87 @@ class Useful(commands.Cog):
             else:
                 result += char  # 非英字はそのまま
 
-        await ctx.response.send_message(result, ephemeral=True)
+        await ctx.followup.send(result, ephemeral=True)
+        await self.dbm.log_command(ctx.user.id, "text", [txt_type, text], ctx.guild.id if ctx.guild else None, result="Success")
+
+    # button
+
+    @app_commands.command(name="button", description="URLボタンを作成します")
+    @app_commands.describe(name="ボタンの名前")
+    @app_commands.describe(url="URL")
+    @app_commands.describe(message="メッセージ文")
+    @app_commands.checks.cooldown(1, 3)
+    @restrict_check
+    async def button(self, ctx: discord.Interaction, name: app_commands.Range[str, 1, 80], url: str, message: app_commands.Range[str, 1, 400] = ""):
+        await ctx.response.defer()
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
+
+        try:
+            button = discord.ui.Button(label=name, style=discord.ButtonStyle.link, url=url)
+            view = discord.ui.View()
+            view.add_item(button)
+
+        except Exception:
+            await send_error(ctx, None, "URLの形式が正しいか確認してください", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "button", [name, url, message], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
+        
+        else:
+            await ctx.followup.send(message, view=view, ephemeral=False)
+            await self.dbm.log_command(ctx.user.id, "button", [name, url, message], ctx.guild.id if ctx.guild else None, result="Success")
+
+    # password
+
+    @app_commands.command(name="password", description="パスワードを生成します")
+    @app_commands.describe(txt_type="使用する文字の種類")
+    @app_commands.describe(long="長さ")
+    @app_commands.describe(pcs="個数")
+    @app_commands.choices(txt_type=[
+        discord.app_commands.Choice(name="数字 (0~9)", value="number"),
+        discord.app_commands.Choice(name="アルファベット (a~z, A~Z)", value="alphabet"),
+        discord.app_commands.Choice(name="英数字小文字 (0~9, a~z)", value="alphabet_l"),
+        discord.app_commands.Choice(name="英数字 (0~9, a~z, A~Z)", value="alphabet_n"),
+        discord.app_commands.Choice(name="英数字と記号", value="alphabet_s"),
+        discord.app_commands.Choice(name="16進数", value="hex")])
+    @restrict_check
+    async def password(self, ctx: discord.Interaction, txt_type: str, long: app_commands.Range[int, 1, 64], pcs: app_commands.Range[int, 1, 30] = None):
+        await ctx.response.defer(ephemeral=True)
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
+
+        # 文字セット
+        char_sets = {
+            "number": string.digits,
+            "alphabet": string.ascii_letters,
+            "alphabet_l": string.digits + string.ascii_lowercase,
+            "alphabet_n": string.digits + string.ascii_letters,
+            "alphabet_s": string.digits + string.ascii_letters + string.punctuation,
+            "hex": "0123456789abcdef"
+        }
+
+        char_set = char_sets.get(txt_type)
+
+        # パスワードを生成
+        passwords = ""
+
+        if pcs:
+            if pcs > 1:
+                for i in range(pcs):
+                    passwords += f'{"".join(random.choices(char_set, k=long))}\n'
+            
+            else:
+                passwords = "".join(random.choices(char_set, k=long))
+
+        else:
+            passwords = "".join(random.choices(char_set, k=long))
+
+        await ctx.followup.send(passwords, ephemeral=True)
+        await self.dbm.log_command(ctx.user.id, "password", [txt_type, long, pcs], ctx.guild.id if ctx.guild else None, result="Success")
+
 
     #########################
 
