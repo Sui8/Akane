@@ -124,7 +124,7 @@ def help_embed(mode):
                     inline=False)
     embed.add_field(name="注意事項",
                     value="・AIと会話しない場合は、メッセージの先頭に`::`または`//`を付けてください。\n"
-                          "・会話履歴はAkaneと各ユーザー間で保存されます (直近30件まで)。他のユーザーとの会話に割り込むことはできません。\n"
+                          "・会話履歴はAkaneと各ユーザー間で保存されます (直近300件まで)。他のユーザーとの会話に割り込むことはできません。\n"
                          f"・会話に不調を感じる場合は、`/ai clear_log`と送信し、会話履歴をリセットしてください。\n"
                           "・現在は一部のサーバーオーナー向けに機能を開放しています。\n"
                           "・Discord規約や公序良俗に反する発言を行ったり、Akaneにそのような発言を促す行為を禁止します。",
@@ -661,7 +661,7 @@ class Akane_ai(commands.Cog):
 
                                     except Exception:
                                         history = []
-
+                            
                             response, iofile = gemini(message.content, 0, history, chara)
 
                         # 会話が初めてならデータ作成＆インストラクション
@@ -704,7 +704,7 @@ class Akane_ai(commands.Cog):
                                                     SET 
                                                         message_count = message_count + 1,
                                                         saving_count = CASE 
-                                                            WHEN saving_count < 30 THEN saving_count + 1
+                                                            WHEN saving_count < 300 THEN saving_count + 1
                                                             ELSE saving_count
                                                         END
                                                     WHERE user_id = $1;
