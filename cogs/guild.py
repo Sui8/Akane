@@ -3,6 +3,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
 
+# 自作モジュール
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
+
 
 ##################################################
 
@@ -12,53 +16,79 @@ from discord.ext import commands  # Bot Commands Framework
 class Guild(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        print("GuildCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("guild: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("guild: Database is not ready")
+
+        #############################
+
+        print("guild: ready")
 
     #########################
 
-    # GuildIcon
+    # server
 
-    @app_commands.command(name="getguildicon", description="このサーバーのアイコンを取得します")
+    @app_commands.command(name="server", description="サーバー情報を取得します")
     @app_commands.checks.cooldown(2, 15)
-    async def getguildicon(self, ctx: discord.Interaction):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+    @ephemeral_check
+    @restrict_check
+    async def server(self, ctx: discord.Interaction):
+        await ctx.response.defer()
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
-        else:
-            ephemeral = 0
-
-        #####
+        if not ctx.guild:
+            await send_error(ctx, None, "このコマンドはサーバー以外で使用できません", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "server", None, ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
+            return
 
         try:
-            guildicon = ctx.guild.icon.replace(static_format='png')
+            icon = ctx.guild.icon.replace(static_format='png')
+            created_at = ctx.guild.created_at.timestamp()
+            others = f"ロール数: {len(ctx.guild.roles)}" \
+                   + f"絵文字数: {len(ctx.guild.emojis)}" \
+                   + f"スタンプ数: {len(ctx.guild.stickers)}" \
+                   + f"サーバーブースト: {ctx.guild.premium_subscription_count} (レベル{ctx.guild.premium_tier})" \
+                   + f"認証レベル: {ctx.guild.verification_level}" \
+                   + f"AFK: {ctx.guild.afk_timeout}秒"
+
+            embed.add_field(name="サーバーID", value=ctx.guild.id, inline=True)
+            embed.add_field(name="作成日時", value=f"<t:{created_at}:f>", inline=True)
+            embed.add_field(name="所有者", value=ctx.guild.owner.mention, inline=True)
+            embed.add_field(name="人数", value=f"{ctx.guild.member_count}人", inline=True)  # Memberインテント必須
+            embed.add_field(name="チャンネル数", value=f"テキスト: {len(ctx.guild.text_channels)}\nボイス: {len(ctx.guild.voice_channels)}", inline=True)
+            embed.add_field(name="その他", value=others, inline=True)
 
         except Exception:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="サーバーアイコンを取得できません",
-                                  color=0xff0000)
-            await ctx.response.send_message(embed=embed, ephemeral=True)
+            await send_error(ctx, None, "サーバー情報を取得できません。\nBotの権限を確認して下さい。", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "server", None, ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
+            return
 
         else:
-            embed = discord.Embed(title="サーバーアイコン",
-                                  description=":white_check_mark: 画像を取得しました。")
-            embed.set_thumbnail(url=guildicon)
-            await ctx.response.send_message(embed=embed, ephemeral=ephemeral)
+            embed = discord.Embed(title="サーバー情報",
+                                  description="",
+                                  color=discord.Colour.dark_blue())
+            embed.set_thumbnail(url=icon)
+            await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+            await self.dbm.log_command(ctx.user.id, "server", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     #########################
 
     ''' クールダウン '''
 
-    @getguildicon.error
+    @server.error
     async def on_command_error(self, ctx: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.checks.CommandOnCooldown):
             retry_after_int = int(error.retry_after)

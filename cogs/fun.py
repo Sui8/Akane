@@ -6,6 +6,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
 
+# 自作モジュール
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
+
 
 ##################################################
 
@@ -15,30 +19,36 @@ from discord.ext import commands  # Bot Commands Framework
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        print("FunCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("fun: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("fun: Database is not ready")
+
+        #############################
+
+        print("fun: Ready")
 
     #########################
 
     # cat
     @app_commands.command(name="cat", description="ﾈｺﾁｬﾝ")
+    @ephemeral_check
+    @restrict_check
     async def cat(self, ctx: discord.Interaction):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
-
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
-
-        else:
-            ephemeral = 0
-
-        #####
+        await ctx.response.defer()
+        ephemeral = ctx.extras.get('ephemeral', False)
+        
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         nekos = ["🐱( '-' 🐱 )ﾈｺﾁｬﾝ", "ﾆｬﾝฅ(>ω< )ฅﾆｬﾝ♪",
                  "ฅ•ω•ฅﾆｬﾆｬｰﾝ✧", "ฅ( ̳• ·̫ • ̳ฅ)にゃあ",
@@ -72,99 +82,82 @@ class Fun(commands.Cog):
                  "ฅ•ω•ฅﾆｬﾆｬｰﾝ✧", "๑•̀ㅁ•́ฅ✧にゃ!!",
                  "ヾ(⌒(_*Φ ﻌ Φ*)_ﾆｬｰﾝ♡",
                  "ᗦ↞◃ ᗦ↞◃ ᗦ↞◃ ᗦ↞◃ ฅ(^ω^ฅ) ﾆｬ～"]
-        await ctx.response.send_message(random.choice(nekos), ephemeral=ephemeral)
+        await ctx.followup.send(random.choice(nekos), ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "cat", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     # dice
 
-    @app_commands.command(name="dice", description="サイコロを振るで")
-    @app_commands.describe(pcs="サイコロの個数（1~100）")
-    @app_commands.describe(maximum="サイコロの最大値（1～999）")
-    async def dice(self, ctx: discord.Interaction, pcs: int = 1, maximum: int = 6):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+    @app_commands.command(name="dice", description="サイコロを振ります")
+    @app_commands.describe(pcs="サイコロの個数")
+    @app_commands.describe(maximum="サイコロの最大値")
+    @ephemeral_check
+    @restrict_check
+    async def dice(self, ctx: discord.Interaction, pcs: app_commands.Range[int, 1, 100] = 1, maximum: app_commands.Range[int, 1, 999] = 6):
+        await ctx.response.defer()
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
-        else:
-            ephemeral = 0
-
-        #####
-
-        # エラー: サイコロの個数が範囲外
-        if not 0 < pcs < 101:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="サイコロの個数は1~100で指定してください",
-                                  color=0xff0000)
-            await ctx.response.send_message(embed=embed, ephemeral=True)
-
-        # エラー: サイコロの目が範囲外
-        elif not 0 < maximum < 1000:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="サイコロの目の最大値は個数は1~999で指定してください",
-                                  color=0xff0000)
-            await ctx.response.send_message(embed=embed, ephemeral=True)
+        # maximumが6以下なら絵文字を使用する
+        if maximum > 6:
+            dices = [random.randint(1, maximum) for i in range(pcs)]
 
         else:
-            # maximumが6以下なら絵文字を使用する
-            if maximum > 6:
-                dices = [random.randint(1, maximum) for i in range(pcs)]
+            word_list = [":one:", ":two:", ":three:",
+                            ":four:", ":five:", ":six:"]
+            word_list = word_list[:(maximum - 1)]
+            dices = [random.choice(word_list) for i in range(pcs)]
 
-            else:
-                word_list = [":one:", ":two:", ":three:",
-                             ":four:", ":five:", ":six:"]
-                word_list = word_list[:(maximum - 1)]
-                dices = [random.choice(word_list) for i in range(pcs)]
+        await ctx.followup.send(f":game_die: {', '.join(map(str, dices))}が出たよ", ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "dice", [pcs, maximum], ctx.guild.id if ctx.guild else None, result="Success")
 
-            await ctx.response.send_message(f":game_die: {', '.join(map(str, dices))}が出たで", ephemeral=ephemeral)
+    # omikuji
 
-    # kuji
+    @app_commands.command(name="omikuji", description="おみくじ")
+    @app_commands.describe(pcs="引く枚数")
+    @ephemeral_check
+    @restrict_check
+    async def omikuji(self, ctx: discord.Interaction, pcs: app_commands.Range[int, 1, 100] = 1):
+        await ctx.response.defer()
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-    @app_commands.command(name="kuji", description="おみくじ")
-    @app_commands.describe(pcs="引く枚数（1~100）")
-    async def kuji(self, ctx: discord.Interaction, pcs: int = 1):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        omikuji_list = ["大大凶", "大凶", "凶", "末吉",
+                        "小吉", "中吉", "吉", "大吉", "大大吉"]
+        kuji_results = [""] * pcs
+        points = 0
+
+        if pcs > 1:
+            for i in range(pcs):
+                j = random.choice(omikuji_list)
+                points += omikuji_list.index(j) + 1
+                kuji_results[i] = f"**{j}**"
+
+            await ctx.followup.send(f"今日の運勢は... {', '.join(map(str, kuji_results))}！"
+                                            f"（{pcs}連おみくじ総合運勢: **{omikuji_list[(points // pcs) - 1]}）**", ephemeral=ephemeral)
 
         else:
-            ephemeral = 0
+            await ctx.followup.send(f"今日の運勢は... **{random.choice(omikuji_list)}**！", ephemeral=ephemeral)
 
-        #####
+        await self.dbm.log_command(ctx.user.id, "omikuji", pcs, ctx.guild.id if ctx.guild else None, result="Success")
 
-        # エラー: 枚数が範囲外
-        if not 0 < pcs < 101:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="引くおみくじの枚数は1~100で指定してください",
-                                  color=0xff0000)
-            await ctx.response.send_message(embed=embed, ephemeral=True)
-
-        else:
-            omikuji_list = ["大大凶", "大凶", "凶", "末吉",
-                            "小吉", "中吉", "吉", "大吉", "大大吉"]
-            kuji_results = [""] * pcs
-            points = 0
-
-            if pcs > 1:
-                for i in range(pcs):
-                    j = random.choice(omikuji_list)
-                    points += omikuji_list.index(j) + 1
-                    kuji_results[i] = f"**{j}**"
-
-                await ctx.response.send_message(f"今日の運勢は... {', '.join(map(str, kuji_results))}！"
-                                                f"（{pcs}連おみくじ総合運勢: **{omikuji_list[(points // pcs) - 1]}）**", ephemeral=ephemeral)
-
-            else:
-                await ctx.response.send_message(f"今日の運勢は... **{random.choice(omikuji_list)}**！", ephemeral=ephemeral)
-
-    # じゃんけん
+    # janken
 
     @app_commands.command(name="janken", description="じゃんけん")
+    @restrict_check
     async def janken(self, ctx: discord.Interaction):
+        await ctx.response.defer()
+        #ephemeral = ctx.extras.get('ephemeral', False)
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
+
         button1 = discord.ui.Button(label="ぐー", style=discord.ButtonStyle.primary, custom_id="j_g")
         button2 = discord.ui.Button(label="ちょき", style=discord.ButtonStyle.success, custom_id="j_c")
         button3 = discord.ui.Button(label="ぱー", style=discord.ButtonStyle.danger, custom_id="j_p")
@@ -172,7 +165,8 @@ class Fun(commands.Cog):
         view.add_item(button1)
         view.add_item(button2)
         view.add_item(button3)
-        await ctx.response.send_message("最初はぐー、じゃんけん", view=view, ephemeral=False)
+        await ctx.followup.send("最初はぐー、じゃんけん", view=view, ephemeral=False)
+        await self.dbm.log_command(ctx.user.id, "janken", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     #########################
 

@@ -9,6 +9,10 @@ from discord.ext import commands  # Bot Commands Framework
 from aiodanbooru.api import DanbooruAPI  # aiodanbooru
 import requests  # requests
 
+# 自作モジュール
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
+
 
 ##################################################
 
@@ -18,13 +22,22 @@ import requests  # requests
 class Nijigen(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        print("NijigenCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("nijigen: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("nijigen: Database is not ready")
+
+        #############################
+
+        print("nijigen: Ready")
 
     #########################
 
@@ -32,21 +45,17 @@ class Nijigen(commands.Cog):
 
     @app_commands.command(name="danbooru", description="Danbooruで画像検索します")
     @app_commands.checks.cooldown(2, 15)
-    @app_commands.describe(tags="タグを半角カンマ区切りで指定")
+    @app_commands.describe(tags="タグ (半角カンマ区切り)")
+    @ephemeral_check
+    @restrict_check
     async def danbooru(self, ctx: discord.Interaction, tags: str = None):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
-
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
-
-        else:
-            ephemeral = 0
-
-        #####
+        ephemeral = ctx.extras.get('ephemeral', False)
 
         await ctx.response.defer()
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         try:
             tag_list = tags.split(',')
@@ -58,10 +67,8 @@ class Nijigen(commands.Cog):
                 post = await dan.get_random_post()
 
             except Exception:
-                embed = discord.Embed(title=":x: エラー",
-                                      description="検索に失敗しました。レート制限の可能性があります。",
-                                      color=0xff0000)
-                await ctx.followup.send(embed=embed, ephemeral=True)
+                await send_error(ctx, None, "検索に失敗しました。時間をおいてからお試しください。", None, is_followup=True)
+                await self.dbm.log_command(ctx.user.id, "nijigen", tags, ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
 
             else:
                 embed = discord.Embed(title="検索結果",
@@ -69,6 +76,7 @@ class Nijigen(commands.Cog):
                 embed.set_image(url=post.media_url)
                 embed.set_footer(text="Powered by Danbooru")
                 await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+                await self.dbm.log_command(ctx.user.id, "nijigen", tags, ctx.guild.id if ctx.guild else None, result="Success")
 
         else:
             try:
@@ -92,32 +100,30 @@ class Nijigen(commands.Cog):
                 view = discord.ui.View()
                 view.add_item(button)
                 await ctx.followup.send(embed=embed, view=view, ephemeral=True)
+                await self.dbm.log_command(ctx.user.id, "nijigen", tags, ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
 
             else:
                 embed = discord.Embed(title="検索結果", description="オプション: なし")
                 embed.set_image(url=post.media_url)
                 embed.set_footer(text="Powered by Danbooru")
                 await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+                await self.dbm.log_command(ctx.user.id, "nijigen", tags, ctx.guild.id if ctx.guild else None, result="Success")
 
     # anime
 
     @app_commands.command(name="animesearch", description="画像からアニメを特定します")
     @app_commands.checks.cooldown(2, 15)
     @app_commands.describe(image="画像をアップロード")
+    @ephemeral_check
+    @restrict_check
     async def animesearch(self, ctx: discord.Interaction, image: discord.Attachment):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
-
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
-
-        else:
-            ephemeral = 0
-
-        #####
+        ephemeral = ctx.extras.get('ephemeral', False)
 
         await ctx.response.defer()
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         try:
             r = requests.get("https://api.trace.moe/search?anilistInfo&"
@@ -133,16 +139,15 @@ class Nijigen(commands.Cog):
                 result = result + f"・{i}\n"
 
         except Exception:
-            embed = discord.Embed(title=":x: エラー",
-                                  description="検索に失敗しました。画像が壊れていないことを確認したうえで、しばらく時間をおいてください。",
-                                  color=0xff0000)
-            await ctx.followup.send(embed=embed, ephemeral=True)
+            await send_error(ctx, None, "検索に失敗しました。画像が壊れていないことを確認したうえで、しばらく時間をおいてください。", None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "animesearch", "(Image)", ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
 
         else:
             embed = discord.Embed(title="検索結果",
                                   description=f"{len(aninames)}件の候補が見つかりました。\n```{result}```")
             embed.set_footer(text="Powered by Trace.moe")
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+            await self.dbm.log_command(ctx.user.id, "animesearch", "(Image)", ctx.guild.id if ctx.guild else None, result="Success")
 
     # クールダウン
 

@@ -11,6 +11,10 @@ from dotenv import load_dotenv  # python-dotenv
 import requests
 from bs4 import BeautifulSoup
 
+# 自作モジュール
+from modules.utils import send_error
+from modules.decorators import ephemeral_check, restrict_check
+
 
 load_dotenv()  # .env読み込み
 
@@ -105,13 +109,22 @@ def track_package(tracking_code):
 class JpPost(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.conn_settings = bot.settings_db_connection
-        self.c_settings = self.conn_settings.cursor()
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        print("JpPostCog on ready")
+        ##### DB読み込み＆チェック #####
+        self.dbm = self.bot.get_cog("DatabaseManager")
+
+        if not self.dbm:
+            raise RuntimeError("jppost: Database cog is not ready")
+
+        if not await self.dbm.check_db():
+            raise RuntimeError("jppost: Database is not ready")
+
+        #############################
+
+        print("jppost: ready")
 
     #########################
 
@@ -120,44 +133,47 @@ class JpPost(commands.Cog):
     @app_commands.command(name="track", description="日本郵便の荷物を追跡します")
     @app_commands.describe(number="追跡番号")
     @app_commands.checks.cooldown(2, 30)
-    async def track(self, ctx: discord.Interaction, number: str):
-        # ephemeral #
-        self.c_settings.execute('SELECT ephemeral FROM user_settings WHERE user_id = ?', (ctx.user.id,))
-        user_setting = self.c_settings.fetchone()
+    @ephemeral_check
+    @restrict_check
+    async def track(self, ctx: discord.Interaction, number: app_commands.Range[str, 1, 30]):
+        ephemeral = ctx.extras.get('ephemeral', False)
 
-        if user_setting:
-            ephemeral = True if user_setting[0] == 1 else False
+        await ctx.response.defer()
 
-        else:
-            ephemeral = 0
-
-        #####
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
 
         number.replace("-", "").replace(" ", "").replace("　", "")  # ハイフン除去
 
         result = track_package(number)
 
         if "error" in result:
-            embed = discord.Embed(title="エラー",
-                                  description=result['error'],
-                                  color=0xff0000)
-            return await ctx.response.send_message(embed=embed, ephemeral=True)
+            await send_error(ctx, None, result['error'], None, is_followup=True)
+            await self.dbm.log_command(ctx.user.id, "jppost", number, ctx.guild.id if ctx.guild else None, result=f"Failed ({e})")
+            return
 
-        else:
-            embed = discord.Embed(title="追跡結果", description="",
-                                  timestamp=datetime.datetime.now(), color=0xdc143c)
+        embed = discord.Embed(title="追跡結果", description="",
+                              timestamp=datetime.datetime.now(), color=0xdc143c)
 
-            description = ""
+        description = ""
 
-            for entry in result["history"]:
-                description += f"**{entry['status']}**\n{entry['date']}\n取扱局: {entry['details']}\n\n"
+        for entry in result["history"]:
+            description += f"**{entry['status']}**\n{entry['date']}\n取扱局: {entry['details']}\n\n"
 
-            description = description[:1000]
+        description = description[:1000]
 
-            embed.add_field(name=f"現在のステータス: {result['status']}", value=description)
-            embed.set_footer(text=f"追跡番号: {number}")
+        embed.add_field(name=f"現在のステータス: {result['status']}", value=description)
+        embed.set_footer(text=f"追跡番号: {number}")
 
-            return await ctx.response.send_message(embed=embed, ephemeral=ephemeral)
+        # URLボタン
+        button = discord.ui.Button(label="Webで見る", style=discord.ButtonStyle.link,
+                                url=f"https://www.post.japanpost.jp/receive/tracking/result.php?code={number}")
+        view = discord.ui.View()
+        view.add_item(button)
+
+        await ctx.followup.send(embed=embed, view=view, ephemeral=ephemeral)
+        await self.dbm.log_command(ctx.user.id, "jppost", number, ctx.guild.id if ctx.guild else None, result="Success")
 
     #########################
 
