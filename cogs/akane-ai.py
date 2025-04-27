@@ -33,7 +33,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Gemini API Key
 ''' 初期処理 '''
 
 # Gemini
-AIMODEL_NAME = "gemini-2.0-flash-exp"
+AIMODEL_NAME = "gemini-2.0-flash"
 
 text_generation_config = {
     "temperature": 0.9,
@@ -79,7 +79,8 @@ CHARACTERS = {
     "hiroyuki": ["ひろゆき", "hiroyuki.txt"], "koishi": ["古明地こいし", "koishi.txt"], 
     "bocchi": ["後藤ひとり", "bocchi.txt"], "vegeta": ["ベジータ", "vegeta.txt"],
     "reimu": ["博麗霊夢", "reimu.txt"], "marisa": ["霧雨魔理沙", "marisa.txt"], 
-    "yaju": ["野獣先輩", "yaju.txt"], "kurisu": ["牧瀬紅莉栖", "kurisu.txt"]
+    "yaju": ["野獣先輩", "yaju.txt"], "kurisu": ["牧瀬紅莉栖", "kurisu.txt"],
+    "satoshi": ["サトシ", "satoshi.txt"]
 }
 SYSTEM_PROMPTS = {}
 
@@ -280,7 +281,8 @@ class SelectView(View):
             discord.SelectOption(label="博麗霊夢", value="reimu", description="東方Project [新システム]"),
             discord.SelectOption(label="霧雨魔理沙", value="marisa", description="東方Project [新システム]"),
             discord.SelectOption(label="野獣先輩", value="yaju", description="真夏の夜の淫夢 [新システム]"),
-            discord.SelectOption(label="牧瀬紅莉栖", value="kurisu", description="STEINS;GATE [新システム]")
+            discord.SelectOption(label="牧瀬紅莉栖", value="kurisu", description="STEINS;GATE [新システム]"),
+            discord.SelectOption(label="サトシ", value="satoshi", description="ポケットモンスター [新システム]")
         ],
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
@@ -290,9 +292,9 @@ class SelectView(View):
                     try:
                         await conn.execute('''
                         UPDATE ai_talk_data
-                        SET chara = $1
-                        WHERE user_id = $2
-                        ''', select.values[0], ctx.user.id)
+                        SET chara = $1, saving_count = $2
+                        WHERE user_id = $3
+                        ''', select.values[0], 0, ctx.user.id)
 
                     except Exception:
                         embed = discord.Embed(title="エラー",
