@@ -117,7 +117,8 @@ def help_embed(mode):
                     value="※以下のコマンドはチャットに送信することで使用できます\n"
                          f"`{'/ai help'.ljust(12)}` このヘルプ画面を表示する\n"
                          f"`{'/ai chara'.ljust(12)}` AIのキャラクターを変更する\n"
-                         f"`{'/ai clear_log'.ljust(12)}` 会話履歴のリセット\n"
+                         f"`{'/ai clear_log'.ljust(12)}` 現在のキャラクターの会話履歴をリセット\n"
+                         f"`{'/ai clear_log_all'.ljust(12)}` 全会話履歴のリセット\n"
                          f"`{'/ai my_stats'.ljust(12)}` 自分の統計情報の表示\n"
                          f"`{'/ai stats'.ljust(12)}` 統計情報の表示",
                     inline=False)
@@ -627,7 +628,7 @@ class Akane_ai(commands.Cog):
             return
 
         # メイン処理
-        if message.channel.name == "akane-ai2":
+        if message.channel.name == "akane-ai":
             try:
                 async with message.channel.typing():
                     # 添付ファイルの処理
