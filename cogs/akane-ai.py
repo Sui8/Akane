@@ -11,7 +11,9 @@ from discord.ui import Select, View
 from discord.ext import commands  # Bot Commands Framework
 import aiohttp  # aiohttp
 from dotenv import load_dotenv  # python-dotenv
-import google.generativeai as genai  # google-generativeai
+from google import genai  # google-generativeai
+from google.genai import types
+from google.genai.types import Content
 import simplejson as json  # simplejson
 import asyncpg  # asyncpg
 
@@ -35,42 +37,24 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Gemini API Key
 # Gemini
 AIMODEL_NAME = "gemini-2.0-flash"
 
-text_generation_config = {
-    "temperature": 0.9,
-    "top_p": 1,
-    "top_k": 1,
-    "max_output_tokens": 512,
-}
-
-image_generation_config = {
-    "temperature": 0.4,
-    "top_p": 1,
-    "top_k": 32,
-    "max_output_tokens": 512,
-}
-
 safety_settings = [
-    {
-        "category": "HARM_CATEGORY_DANGEROUS",
-        "threshold": "BLOCK_NONE",
-    },
-    {
-        "category": "HARM_CATEGORY_HARASSMENT",
-        "threshold": "BLOCK_NONE",
-    },
-    {
-        "category": "HARM_CATEGORY_HATE_SPEECH",
-        "threshold": "BLOCK_NONE",
-    },
-    {
-        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-        "threshold": "BLOCK_NONE",
-    },
-    {
-        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-        "threshold": "BLOCK_NONE",
-    },
-]
+    types.SafetySetting(
+        category="HARM_CATEGORY_HARASSMENT",
+        threshold="BLOCK_NONE"
+        ),
+    types.SafetySetting(
+        category="HARM_CATEGORY_HATE_SPEECH",
+        threshold="BLOCK_NONE"
+        ),
+    types.SafetySetting(
+        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        threshold="BLOCK_NONE"
+        )]
+
+IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp",
+               "image/heic", "image/heif"}
+
+MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB (バイト)
 
 # Prompts
 CHARACTERS = {
@@ -88,7 +72,7 @@ for character_key, (character_name, filename) in CHARACTERS.items():
     with open(f"data/prompts/{filename}", encoding="UTF-8") as f:
         SYSTEM_PROMPTS[character_key] = f.read()
 
-genai.configure(api_key=GOOGLE_API_KEY)
+client = genai.Client(api_key=GOOGLE_API_KEY)
 
 ##################################################
 
@@ -168,14 +152,27 @@ def gemini(text, flag, attachment, chara):
         if chara in CHARACTERS:
             prompt = SYSTEM_PROMPTS[chara]
 
+        elif chara == "all":
+            prompt = "過去のUserとの対話記録を全て参照して、Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
+
         else:
             prompt = "あなたは優秀なチャットボットです。Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
 
-        text_model = genai.GenerativeModel(model_name=AIMODEL_NAME,
-                                           safety_settings=safety_settings,
-                                           generation_config=text_generation_config,
-                                           system_instruction=prompt)
-        chat = text_model.start_chat(history=attachment)
+        # システムプロンプトを会話ログの先頭に追加
+        attachment.insert(0, {"role": "user", "parts": [{"text": prompt}]})
+        attachment.insert(1, {"role": "model", "parts": [{"text": "理解しました"}]})
+
+        print(attachment)
+
+        chat = client.chats.create(model=AIMODEL_NAME,
+                                   config=types.GenerateContentConfig(
+                                       safety_settings=safety_settings,
+                                       temperature=0.9,
+                                       top_p=1,
+                                       top_k=1,
+                                       max_output_tokens=512,
+                                       system_instruction=prompt),
+                                   history=attachment)
 
         # Geminiにメッセージを投げて返答を待つ。エラーはエラーとして返す。
         try:
@@ -214,19 +211,31 @@ def gemini(text, flag, attachment, chara):
         if chara in CHARACTERS:
             prompt = SYSTEM_PROMPTS[chara]
 
+        elif chara == "all":
+            prompt = "過去のUserとの対話記録を全て参照して、Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
+
         else:
             prompt = "あなたは優秀なチャットボットです。Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
 
-        image_model = genai.GenerativeModel(model_name=AIMODEL_NAME,
-                                            safety_settings=safety_settings,
-                                            generation_config=image_generation_config,
-                                            system_instruction=prompt)
-        image_parts = [{"mime_type": "image/jpeg", "data": attachment}]
-        prompt_parts = [image_parts[0], f"\n{text if text else 'この画像は何ですか？'}"]
-
         # Geminiに画像を投げて返答を待つ。エラーはエラーとして返す。
         try:
-            response = image_model.generate_content(prompt_parts)
+            response = client.models.generate_content(
+                model=AIMODEL_NAME,
+                contents=[
+                    text,
+                    types.Part.from_bytes(
+                        data=attachment,
+                        mime_type='image/jpeg'
+                    )
+                ],
+                config=types.GenerateContentConfig(
+                    safety_settings=safety_settings,
+                    temperature=0.4,
+                    top_p=1,
+                    top_k=32,
+                    max_output_tokens=512,
+                    system_instruction=prompt)
+            )
 
         except Exception as e:
             return [False, e], None
@@ -269,6 +278,7 @@ class SelectView(View):
         disabled=False,
         options=[
             discord.SelectOption(label="キャラクターなし", value="normal", description="通常のチャットボット"),
+            discord.SelectOption(label="全ての会話ログ", value="all", description="全キャラクターとの会話ログを読みこむ"),
             discord.SelectOption(label="琴葉茜", value="akane", description="合成音声キャラクター"),
             discord.SelectOption(label="琴葉葵", value="aoi", description="合成音声キャラクター"),
             discord.SelectOption(label="人狼（β版）", value="jinrou", description="人狼ゲーム"),
@@ -292,9 +302,9 @@ class SelectView(View):
                     try:
                         await conn.execute('''
                         UPDATE ai_talk_data
-                        SET chara = $1, saving_count = $2
-                        WHERE user_id = $3
-                        ''', select.values[0], 0, ctx.user.id)
+                        SET chara = $1
+                        WHERE user_id = $2
+                        ''', select.values[0], ctx.user.id)
 
                     except Exception:
                         embed = discord.Embed(title="エラー",
@@ -310,6 +320,10 @@ class SelectView(View):
             # キャラクターなしの場合
             if select.values[0] == "normal":
                 selected_chara = "キャラクターなし"
+
+            # 「全て」の場合
+            elif select.values[0] == "all":
+                selected_chara = "全ての会話ログ"
 
             else:
                 selected_chara = CHARACTERS[select.values[0]][0]
@@ -429,7 +443,7 @@ class Akane_ai(commands.Cog):
 
 
     # clear_log
-    @group.command(name="clear_log", description="保存中の会話履歴を全て消去する")
+    @group.command(name="clear_log", description="現在のキャラクターとの会話履歴を消去する")
     @ephemeral_check
     @restrict_check
     async def clear_log(self, ctx: discord.Interaction):
@@ -441,14 +455,16 @@ class Akane_ai(commands.Cog):
             return
 
         async with self.dbm.pool.acquire() as conn:
-            saving_count = await conn.fetchval("""
-                SELECT saving_count
+            saving_count, chara = await conn.fetchval("""
+                SELECT saving_count, chara
                 FROM ai_talk_data 
                 WHERE user_id = $1
             """, ctx.user.id)
 
         # アカウント登録済みか
         if saving_count:
+            saving_count[chara] = 0
+
             async with self.dbm.pool.acquire() as conn:
                 async with conn.transaction():
                     try:
@@ -456,7 +472,7 @@ class Akane_ai(commands.Cog):
                         UPDATE ai_talk_data
                         SET saving_count = $1
                         WHERE user_id = $2
-                        ''', 0, ctx.user.id)
+                        ''', json.dumps(saving_count), ctx.user.id)
 
                     except Exception as e:
                         await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
@@ -464,7 +480,7 @@ class Akane_ai(commands.Cog):
                         return
 
             embed = discord.Embed(title=f":white_check_mark: 完了",
-                                  description="保存中の会話履歴を全て消去しました",
+                                  description=f"`{CHARACTERS[chara][0]}`との会話履歴を消去しました",
                                   color=discord.Colour.red())
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
 
@@ -472,6 +488,54 @@ class Akane_ai(commands.Cog):
             await send_error(ctx, None, "あなたはまだ会話を行っていません", None, is_followup=True)
 
         await self.dbm.log_command(ctx.user.id, "ai clear_log", None, ctx.guild.id if ctx.guild else None, result="Success")
+
+
+    # clear_log_all
+    @group.command(name="clear_log_all", description="AIとの会話履歴を全て消去する")
+    @ephemeral_check
+    @restrict_check
+    async def clear_log_all(self, ctx: discord.Interaction):
+        await ctx.response.defer()
+        ephemeral = ctx.extras.get('ephemeral', False)
+
+        if ctx.extras.get('restricted', False):
+            await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
+            return
+
+        async with self.dbm.pool.acquire() as conn:
+            saving_count, chara = await conn.fetchval("""
+                SELECT saving_count, chara
+                FROM ai_talk_data 
+                WHERE user_id = $1
+            """, ctx.user.id)
+
+        # アカウント登録済みか
+        if saving_count:
+            saving_count = {"all": 0, "akane": 0}
+
+            async with self.dbm.pool.acquire() as conn:
+                async with conn.transaction():
+                    try:
+                        await conn.execute('''
+                        UPDATE ai_talk_data
+                        SET saving_count = $1
+                        WHERE user_id = $2
+                        ''', json.dumps(saving_count), ctx.user.id)
+
+                    except Exception as e:
+                        await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
+                        await self.dbm.log_command(ctx.user.id, "ai clear_log_all", None, ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                        return
+
+            embed = discord.Embed(title=f":white_check_mark: 完了",
+                                  description=f"`{CHARACTERS[chara][0]}`との会話履歴を消去しました",
+                                  color=discord.Colour.red())
+            await ctx.followup.send(embed=embed, ephemeral=ephemeral)
+
+        else:
+            await send_error(ctx, None, "あなたはまだ会話を行っていません", None, is_followup=True)
+
+        await self.dbm.log_command(ctx.user.id, "ai clear_log_all", None, ctx.guild.id if ctx.guild else None, result="Success")
 
 
     # chara
@@ -557,87 +621,76 @@ class Akane_ai(commands.Cog):
     @commands.Cog.listener("on_message")
     async def ai_talk(self, message):
         # Bot, 全体メンション, DM, 特定Prefix, コマンドは無視
-        try:
-            if message.author.bot or message.mention_everyone or \
-                    isinstance(message.channel, discord.DMChannel) or \
-                    message.content.startswith("::") or message.content.startswith("//"):
-                return
+        if message.author.bot or message.mention_everyone or \
+            isinstance(message.channel, discord.DMChannel) or \
+            message.content.startswith("::") or message.content.startswith("//"):
+            return
 
-            # メイン処理
-            elif message.channel.name == "akane-ai":
+        # メイン処理
+        if message.channel.name == "akane-ai2":
+            try:
                 async with message.channel.typing():
-                    # 画像データかどうか（画像は過去ログ使用不可）
-                    if message.attachments:
-                        flag = 1
+                    # 添付ファイルの処理
+                    image_parts = []
 
+                    async with aiohttp.ClientSession() as session:
                         for attachment in message.attachments:
-                            # 対応していない画像形式なら弾く処理
-                            if not any(attachment.filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']):
-                                await message.reply(":x: 画像が読み取れません。ファイルを変更してください。\n"
-                                                    "対応しているファイル形式: ```.png .jpg .jpeg .gif .webp```",
-                                                    mention_author=False)
-                                return
-
-                            async with aiohttp.ClientSession() as session:
+                            if attachment.content_type in IMAGE_TYPES:
+                                # attachment.urlから画像DL
                                 async with session.get(attachment.url) as resp:
-                                    if resp.status != 200:
-                                        await message.reply(":x: 画像が読み取れません。時間を空けてお試しください。",
-                                                            mention_author=False)
-                                        return
-
-                                    image_data = await resp.read()
-
-                                    bracket_pattern = re.compile(r'<[^>]+>')
-                                    cleaned_text = bracket_pattern.sub('', message.content)
-
-                                    async with self.dbm.pool.acquire() as conn:
-                                        try:
-                                            chara = await conn.fetchval("""
-                                                SELECT chara FROM ai_talk_data WHERE user_id = %1
-                                            """, message.author.id)
-
-                                        except Exception:
-                                            chara = "akane"
-
-                                    if not chara:
-                                        chara = "akane"
-
-                                        async with self.dbm.pool.acquire() as conn:
-                                            async with conn.transaction():
-                                                try:
-                                                    await conn.execute(''' 
-                                                        INSERT INTO ai_talk_data (user_id, message_count, saving_count, chara, status)
-                                                        VALUES ($1, $2, $3, $4, $5)
-                                                    ''', message.author.id, 1, 1, chara, "active")
-
-                                                except Exception:
-                                                    await message.reply(":x: システムエラーが発生しました。時間を空けてお試しください。",
-                                                            mention_author=False)
-                                                    return
-
-                                        embed = help_embed()
-                                        await message.reply(embed=embed)
-
-                                    response, iofile = gemini(cleaned_text, 1, image_data, chara)
-
-                    else:
-                        # 文章モード (過去データ読み取り)
-                        flag = 0
-
+                                    if resp.status == 200:
+                                        img_bytes = await resp.read()
+                                        image_parts.append(
+                                            types.Part.from_bytes(
+                                                data=img_bytes,
+                                                mime_type=attachment.content_type))
+                    
+                    # 画像があるとき
+                    if image_parts:
+                        # キャラクター設定取得
                         async with self.dbm.pool.acquire() as conn:
                             try:
                                 result = await conn.fetchrow("""
-                                    SELECT chara, saving_count FROM ai_talk_data WHERE user_id = $1
-                                """, message.author.id)
+                                            SELECT chara FROM ai_talk_data WHERE user_id = $1
+                                        """, message.author.id)
 
                             except Exception as e:
                                 import traceback
                                 print(traceback.format_exc())
-                                result = ["akane", 0]
+                                result = "akane"
 
-                        # 会話したことがあるか
+                        # メッセージが空か
+                        if len(message.content) == 0:
+                            content = "この画像は何ですか？軽く説明と感想を述べてください。"
+
+                        else:
+                            content = message.content
+
+                        # 今は画像1枚しか投げられない
+                        response, iofile = gemini(content, 1, image_parts[0], result)
+
+                    # 画像がない (テキスト) or 読み込めない場合
+                    else:
+                        if len(message.content) == 0:
+                            return
+
+                        # 会話ログ取得
+                        async with self.dbm.pool.acquire() as conn:
+                                try:
+                                    result = await conn.fetchrow("""
+                                        SELECT chara, saving_count FROM ai_talk_data WHERE user_id = $1
+                                    """, message.author.id)
+
+                                except Exception as e:
+                                    import traceback
+                                    print(traceback.format_exc())
+                                    result = ["akane", json.loads({"all": 0, "akane": 0})]
+
+                        # 会話歴あり
                         if result:
                             chara, saving_count = result
+                            saving_count = json.loads(saving_count)
+                            history = []
 
                             async with self.dbm.pool.acquire() as conn:
                                 async with conn.transaction():
@@ -647,13 +700,13 @@ class Akane_ai(commands.Cog):
                                             FROM (
                                                 SELECT message, timestamp
                                                 FROM ai_talk_logs
-                                                WHERE user_id = $1
+                                                WHERE user_id = $1 AND chara = $2
                                                 ORDER BY timestamp DESC
-                                                LIMIT $2
+                                                LIMIT $3
                                             ) AS recent_logs
                                             ORDER BY timestamp ASC;
                                             """
-                                        history_raw = await conn.fetch(query, message.author.id, saving_count)
+                                        history_raw = await conn.fetch(query, message.author.id, chara, saving_count.get(chara, 0))
 
                                         # 生データから中身を取り出して整形
                                         history = [row['message'] for row in history_raw]
@@ -661,13 +714,12 @@ class Akane_ai(commands.Cog):
 
                                     except Exception:
                                         history = []
-                            
-                            response, iofile = gemini(message.content, 0, history, chara)
 
-                        # 会話が初めてならデータ作成＆インストラクション
+                        # 会話が初めてならデータ作成＆説明
                         else:
                             history = []
                             chara = "akane"
+                            saving_count = json.loads({"all": 1, "akane": 1})
 
                             async with self.dbm.pool.acquire() as conn:
                                 async with conn.transaction():
@@ -675,7 +727,7 @@ class Akane_ai(commands.Cog):
                                         await conn.execute(''' 
                                             INSERT INTO ai_talk_data (user_id, message_count, saving_count, chara, status)
                                             VALUES ($1, $2, $3, $4, $5)
-                                        ''', message.author.id, 1, 1, chara, "active")
+                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active")
 
                                     except Exception:
                                         await message.reply(":x: システムエラーが発生しました。時間を空けてお試しください。",
@@ -684,142 +736,119 @@ class Akane_ai(commands.Cog):
 
                             embed = help_embed(0)
                             await message.reply(embed=embed)
-                            response, iofile = gemini(message.content, 0, history, chara)
 
-                    # 正常な返答があれば履歴保存
-                    if response and response[0]:
-                        # 文章モードのみ履歴保存
-                        if len(response[1]) > 0 and flag == 0:
-                            talk_data = [{"role": "user", "parts": [message.content]}, {"role": "model", "parts": [response[1]]}]
+                        content = message.content
+                        print(history)
+                        
+                        # Geminiにデータ投げる
+                        response, iofile = gemini(content, 0, history, chara)
 
-                            async with self.dbm.pool.acquire() as conn:
-                                async with conn.transaction():
-                                    try:
-                                        await conn.execute(''' 
-                                            INSERT INTO ai_talk_logs (user_id, channel_id, guild_id, message, timestamp)
-                                            VALUES ($1, $2, $3, $4, $5)
-                                        ''', message.author.id, message.channel.id, message.guild.id, json.dumps(talk_data), datetime.datetime.now())
-                                        query = """
-                                                    UPDATE ai_talk_data
-                                                    SET 
-                                                        message_count = message_count + 1,
-                                                        saving_count = CASE 
-                                                            WHEN saving_count < 300 THEN saving_count + 1
-                                                            ELSE saving_count
-                                                        END
-                                                    WHERE user_id = $1;
-                                                """
-                                        await conn.execute(query, message.author.id)
+                # 正常な返答があれば履歴保存
+                if response and response[0]:
+                    # 履歴保存
+                    if len(response[1]) > 0:
+                        talk_data = [{"role": "user", "parts": [{"text": content}]}, {"role": "model", "parts": [{"text": response[1]}]}]
 
-                                    except Exception as e:
-                                        print(e)
-                                        pass
+                        # ログ保存数が300件未満か
+                        if saving_count.get(chara, 0) < 300:
+                            saving_count.setdefault(chara, 0)
+                            saving_count[chara] += 1
 
-                            # 文字数が1000を超えたらカット
-                            if len(response) > 1000:
-                                response = f"{response[1][:1000]}\n\n※1000文字を超える内容は省略されました※"
+                        if saving_count.get("all", 0) < 300:
+                            saving_count.setdefault("all", 0)
+                            saving_count["all"] += 1
 
-                            else:
-                                response = response[1]
+                        async with self.dbm.pool.acquire() as conn:
+                            async with conn.transaction():
+                                try:
+                                    await conn.execute(''' 
+                                        INSERT INTO ai_talk_logs (user_id, channel_id, guild_id, message, chara, timestamp)
+                                        VALUES ($1, $2, $3, $4, $5, $6)
+                                    ''', message.author.id, message.channel.id, message.guild.id, json.dumps(talk_data), chara, datetime.datetime.now())
+                                    query = """
+                                                UPDATE ai_talk_data
+                                                SET 
+                                                    message_count = message_count + 1,
+                                                    saving_count = $2
+                                                WHERE user_id = $1;
+                                            """
+                                    await conn.execute(query, message.author.id, json.dumps(saving_count))
 
-                            # 31行目からのファイルを添付するか
-                            try:
-                                if iofile is None:
-                                    await message.reply(response, mention_author=False)
-                                    return
+                                except Exception as e:
+                                    print(e)
+                                    pass
 
-                                else:
-                                    await message.reply(response + "\n\n※16行以上の返答は省略されました",
-                                                        file=discord.File(fp=iofile, filename="response.txt"), mention_author=False)
-                                    return
+                        # 文字数が1000を超えたらカット
+                        if len(response) > 1000:
+                            response = f"{response[1][:1000]}\n\n※1000文字を超える内容は省略されました※"
 
-                            except Exception as e:
-                                print(e)
+                        else:
+                            response = response[1]
 
-                        # 画像モード
-                        elif len(response[1]) > 0 and flag == 1:
-                            # メッセージカウントを増やす
-                            async with self.dbm.pool.acquire() as conn:
-                                async with conn.transaction():
-                                    try:
-                                        query = """
-                                                    UPDATE ai_talk_data
-                                                    SET 
-                                                        message_count = message_count + 1,
-                                                    WHERE user_id = $1;
-                                                """
-                                        await conn.execute(query, message.author.id)
-
-                                    except Exception:
-                                        pass
-
-                            if len(response) > 1000:
-                                response = f"{response[1][:1000]}\n\n※1000文字を超える内容は省略されました※"
-
-                            else:
-                                response = response[1]
-
-                            # 31行目からのファイルを添付するか
+                        # 31行目からのファイルを添付するか
+                        try:
                             if iofile is None:
                                 await message.reply(response, mention_author=False)
                                 return
 
                             else:
-                                await message.reply(response + "\n\n※16行以上の返答は省略されました", file=iofile, mention_author=False)
+                                await message.reply(response + "\n\n※16行以上の返答は省略されました",
+                                                    file=discord.File(fp=iofile, filename="response.txt"), mention_author=False)
                                 return
 
-                    else:
-                        # エラーログ出力
-                        if str(response[1]).startswith("429"):
-                            embed = discord.Embed(title="混雑中",
-                                                    description="Akane AIが混雑しています。しばらくお待ちください。",
-                                                    color=0xff0000)
-                            embed.set_footer(text=f"Report ID: {message.id}")
-                            await message.reply(embed=embed, mention_author=False)
-                            return
+                        except Exception as e:
+                            print(e)
 
-                        elif str(response[1]).startswith("500"):
-                            embed = discord.Embed(title="混雑中またはエラー",
-                                                    description="サーバーが混雑しているか、内部エラーが発生しています。\n"
-                                                                "**30分～1時間程度**時間を空けると完全に解決される場合がありますが、このままご利用いただけます。",
-                                                    color=0xff0000)
-                            embed.set_footer(text=f"Report ID: {message.id}")
-                            await message.reply(embed=embed, mention_author=False)
-                            return
-
-                        # 例外エラー
-                        else:
-                            embed = discord.Embed(title="エラー",
-                                                    description="不明なエラーが発生しました。しばらく時間を空けるか、不適切な内容を削除してください。",
-                                                    color=0xff0000)
-                            embed.set_footer(text=f"Report ID: {message.id}")
-                            await message.reply(embed=embed, mention_author=False)
-                            return
-
-                        if message.attachments:
-                            value = "（画像）"
-
-                        else:
-                            value = message.content
-
-                        # エラーを専用チャンネルに投げておく
-                        error_log = self.bot.get_channel(self.bot.ERROR_LOG)
-                        embed = discord.Embed(title="エラー",
-                                            description="AIチャットにてエラーが発生しました。",
-                                            timestamp=datetime.datetime.now(),
+                else:
+                    # エラーログ出力
+                    if str(response[1]).startswith("429"):
+                        embed = discord.Embed(title="混雑中",
+                                            description="Akane AIが混雑しています。しばらくお待ちください。",
                                             color=0xff0000)
-                        embed.add_field(name="メッセージ内容", value=value)
-                        embed.add_field(name="エラー内容", value=response[1])
-                        embed.add_field(name="ギルドとチャンネル", value=f"{message.guild.name} (ID: {message.guild.id})\n#{message.channel.id}")
-                        embed.add_field(name="ユーザー", value=f"{message.author.mention} (ID: {message.author.id})")
                         embed.set_footer(text=f"Report ID: {message.id}")
-                        await error_log.send(embed=embed)
-                        return
+                        await message.reply(embed=embed, mention_author=False)
 
-        except Exception as e:
-            import traceback
-            print(traceback.format_exc())
-            print(e)
+                    elif str(response[1]).startswith("500"):
+                        embed = discord.Embed(title="混雑中またはエラー",
+                                            description="サーバーが混雑しているか、内部エラーが発生しています。\n"
+                                                        "**30分～1時間程度**時間を空けると完全に解決される場合がありますが、このままご利用いただけます。",
+                                            color=0xff0000)
+                        embed.set_footer(text=f"Report ID: {message.id}")
+                        await message.reply(embed=embed, mention_author=False)
+
+                    # 例外エラー
+                    else:
+                        embed = discord.Embed(title="エラー",
+                                            description="不明なエラーが発生しました。しばらく時間を空けるか、不適切な内容を削除してください。",
+                                            color=0xff0000)
+                        embed.set_footer(text=f"Report ID: {message.id}")
+                        await message.reply(embed=embed, mention_author=False)
+
+                    if message.attachments:
+                        value = "（画像）"
+
+                    else:
+                        value = message.content
+
+                    # エラーを専用チャンネルに投げておく
+                    error_log = self.bot.get_channel(self.bot.ERROR_LOG)
+                    embed = discord.Embed(title="エラー",
+                                        description="AIチャットにてエラーが発生しました。",
+                                        timestamp=datetime.datetime.now(),
+                                        color=0xff0000)
+                    embed.add_field(name="メッセージ内容", value=value)
+                    embed.add_field(name="エラー内容", value=response[1])
+                    embed.add_field(name="ギルドとチャンネル", value=f"{message.guild.name} (ID: {message.guild.id})\n#{message.channel.id}")
+                    embed.add_field(name="ユーザー", value=f"{message.author.mention} (ID: {message.author.id})")
+                    embed.set_footer(text=f"Report ID: {message.id}")
+                    await error_log.send(embed=embed)
+                    return
+            except Exception as e:
+                import traceback
+                print(traceback.format_exc())
+
+        else:
+            return
 
     #########################
 

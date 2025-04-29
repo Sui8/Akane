@@ -17,13 +17,7 @@ discord.py==2.5.2
 distro==1.9.0
 Flask==3.1.0
 frozenlist==1.5.0
-google-ai-generativelanguage==0.6.15
-google-api-core==2.24.2
-google-api-python-client==2.166.0
-google-auth==2.38.0
-google-auth-httplib2==0.2.0
-google-generativeai==0.8.4
-googleapis-common-protos==1.69.2
+google-genai==1.12.1
 grpcio==1.72.0rc1
 grpcio-status==1.71.0
 httplib2==0.22.0

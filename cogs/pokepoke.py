@@ -38,10 +38,11 @@ type_color_mapping = {"0": 0x93bb3b, "1": 0xe55837, "2": 0x2ca0db, "3": 0xfada00
 get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "[A1] 最強の遺伝子 ミュウツー", "A13": "[A1] 最強の遺伝子 ピカチュウ",
                       "A1": "[A1] 最強の遺伝子", "A1a": "[A1a] 幻のいる島", "A21": "[A2] 時空の激闘 ディアルガ", "A22": "[A2] 時空の激闘 パルキア",
                       "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
+                      "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
-major_packs = ["A11", "A12", "A13", "A21", "A22"]
+major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32"]
 promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "ATS", "APS", "ACP", "AMS", "AGC"]
 
 ##################################################
@@ -61,6 +62,9 @@ async def pick_cards(self, pack_id, pcs):
 
     elif pack_id in ["A21", "A22"]:
         where = f"pack_id IN ('A2', '{pack_id}')"
+
+    elif pack_id in ["A31", "A32"]:
+        where = f"pack_id IN ('A3', '{pack_id}')"
 
     else:
         where = f"pack_id = '{pack_id}'"
@@ -193,6 +197,8 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[A3] 双天の守護者 ソルガレオ", value="A31"),
+        discord.app_commands.Choice(name="[A3] 双天の守護者 ルナアーラ", value="A32"),
         discord.app_commands.Choice(name="[A2b] シャイニングハイ", value="A2b"),
         discord.app_commands.Choice(name="[A2a] 超克の光", value="A2a"),
         discord.app_commands.Choice(name="[A2] 時空の激闘 ディアルガ", value="A21"),
