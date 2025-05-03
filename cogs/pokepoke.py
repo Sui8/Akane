@@ -358,13 +358,12 @@ class PokePoke(commands.Cog):
                 FROM cards c
                 LEFT JOIN card_specs cs ON c.spec_id = cs.spec_id
                 LEFT JOIN card_skills sk ON c.skill_id = sk.skill_id
-                LEFT JOIN card_abilities ca ON c.ability_id = ca.ability_id
+                LEFT JOIN card_abilities ca ON ca.ability_id = CAST(c.ability_id[1] AS INTEGER)
                 WHERE c.card_name ILIKE $1 OR c.card_name ILIKE $2 OR c.card_name ILIKE $3
                 ORDER BY similarity_score DESC, c.card_id 
                 LIMIT 25
             """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%")
 
-                    
         if not result:
             embed = discord.Embed(title=":x: 検索失敗",
                                 description="一致するカードが見つかりませんでした",
@@ -471,7 +470,7 @@ class PokePoke(commands.Cog):
                             else:
                                 damage_type = ""
 
-                            information += f"\n\n【ワザ】\n**{energy} {selected_card['ability_name']} {selected_card['ability_damage'] if selected_card['ability_damage'] is not None else ''}{damage_type}**"
+                            information += f"\n\n**{energy} {selected_card['ability_name']} {selected_card['ability_damage'] if selected_card['ability_damage'] is not None else ''}{damage_type}**"
 
                             if selected_card['ability_desc']:
                                 information += f"\n{selected_card['ability_desc']}"
@@ -487,12 +486,12 @@ class PokePoke(commands.Cog):
 
                         color = type_color_mapping.get(str(int(selected_card['cardtype']) + 10), 0xffffff)
 
-                    # クレジット
-                    information += "\n\n-# 画像引用元: deviantart.com/biochao"
-
                     embed = discord.Embed(title=f"{selected_card_label}",
                                           description=information,
                                           color=color)
+                    # クレジット
+                    embed.set_footer(text="画像引用元: deviantart.com/biochao")
+
                     await interaction.response.edit_message(embed=embed, view=view)
                 except:
                     import traceback
