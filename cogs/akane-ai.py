@@ -412,6 +412,8 @@ class Akane_ai(commands.Cog):
         if data:
             message_count, saving_count, chara, status = data
 
+            saving_count = json.loads(saving_count)
+
             if status == "active":
                 status_ = "正常"
 
@@ -425,17 +427,21 @@ class Akane_ai(commands.Cog):
             if chara in CHARACTERS:
                 present_chara = CHARACTERS[chara][0]
 
+            elif chara == "all":
+                present_chara = "全会話ログ"
+
             else:
                 present_chara = "キャラクターなし"
 
         else:
             message_count = 0
-            saving_count = 0
+            saving_count = {"all" :0, "akane": 0}
             present_chara = "未設定"
             status_ = "未利用"
 
         embed = discord.Embed(title=f"Akane AI 統計 (@{ctx.user.name})",
-                              description=f"**総会話回数**: {message_count}回\n**保存中の会話履歴**: 直近{saving_count}回\n"
+                              description=f"**総会話回数**: {message_count}回\n**現在のキャラクターとの会話履歴**: 直近{saving_count.get(chara, 0)}回保存中"
+                                          f" (総合: {saving_count.get("all", 0)}回保存中)\n"
                                           f"**キャラクター**: {present_chara}\n**ステータス**: {status_}",
                               color=discord.Colour.red())
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)

@@ -28,9 +28,11 @@ cardtype_mapping = {"0": "グッズ", "1": "ポケモンのどうぐ", "2": "サ
                     "9": "2進化ポケモン (ex)"}
 type_mapping = {"0": "草", "1": "炎", "2": "水", "3": "雷", "4": "超", "5": "闘",
                 "6": "悪", "7": "鋼", "8": "ドラゴン", "9": "無色"}
-energy_mapping = {"0": ":green_circle:", "1": ":red_circle:", "2": ":blue_circle:", "3": ":yellow_circle:",
-                  "4": ":purple_circle:", "5": "brown_circle", "6": "black_circle", "7": "鋼",
-                  "8": "龍", "9": ":white_circle:"}
+energy_mapping = {"0": "<:Grass_Energy:1368063994723700898>", "1": "<:Fire_Energy:1368064051480891474>",
+                  "2": "<:Water_Energy:1368064328565129317>", "3": "<:Electric_Energy:1368064437289881611>",
+                  "4": "<:Psychic_Energy:1368064487571198062>", "5": "<:Fighting_Energy:1368064580496134165>",
+                  "6": "<:Dark_Energy:1368064627258167357>", "7": "<:Steel_Energy:1368064661622095912>",
+                  "8": "<:Dragon_Energy:1368064703783239720>", "9": "<:Colorless_Energy:1368064742668894238>"}
 damage_type_mapping = {"0": "+", "1": "×"}
 type_color_mapping = {"0": 0x93bb3b, "1": 0xe55837, "2": 0x2ca0db, "3": 0xfada00, "4": 0xa16aa8, "5": 0xd28916,
                       "6": 0x052f2e, "7": 0xc3ced2, "8": 0xbba92e, "9": 0xe9e6e1, "10": 0x89cbea, "11": 0xc197c1,
@@ -40,10 +42,10 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
                       "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
-                      "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6",
+                      "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
 major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32"]
-promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "ATS", "APS", "ACP", "AMS", "AGC"]
+promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "ATS", "APS", "ACP", "AMS", "AGC"]
 
 ##################################################
 
@@ -207,6 +209,7 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 リザードン", value="A11"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ミュウツー", value="A12"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ピカチュウ", value="A13"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.7", value="A3p"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.6", value="A2bp"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.5", value="A2ap"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.4", value="A2p"),
@@ -398,9 +401,9 @@ class PokePoke(commands.Cog):
                 labels[str(card['card_id'])] = label
                 options.append(discord.SelectOption(label=label, value=card['card_id']))
             
-            # ドロップダウンメニューを作成
+            # ドロップダウンメニューとボタンを作成
             select = discord.ui.Select(placeholder="カードを選んでください", options=options)
-
+            
             # ドロップダウンが選ばれた時のコールバック
             async def select_callback(interaction):
                 if interaction.user != ctx.user:
@@ -419,7 +422,7 @@ class PokePoke(commands.Cog):
                     # ドロップダウンを作成
                     select = discord.ui.Select(placeholder="他のカードを見る", options=options)
                     select.callback = select_callback
-                    view = discord.ui.View(timeout=300)
+                    view = discord.ui.View(timeout=600)
                     view.add_item(select)
 
                     # タイムアウト後の処理
@@ -442,12 +445,12 @@ class PokePoke(commands.Cog):
 
                     # ポケモンの場合
                     elif int(selected_card['cardtype']) >= 4:
-                        information += f" / {type_mapping.get(str(selected_card['type']), '不明')}\n"
+                        information += f" / {energy_mapping.get(str(selected_card['type']), '不明')}\n"
                         information += f"【HP】{selected_card['hp']}\n"
-                        information += f"【弱点】{type_mapping.get(str(selected_card['effective']), '')}\n"
+                        information += f"【弱点】{energy_mapping.get(str(selected_card['effective']), '')}\n"
 
                         if selected_card['away'] >= 0:
-                            information += f"【にげる】{'✪️' * int(selected_card['away'])}\n"
+                            information += f"【にげる】{'<:Colorless_Energy:1368064742668894238>' * int(selected_card['away'])}\n"
 
                         # 進化ポケモン
                         if str(selected_card['cardtype']) in ["5", "6", "8", "9"]:
@@ -484,6 +487,9 @@ class PokePoke(commands.Cog):
 
                         color = type_color_mapping.get(str(int(selected_card['cardtype']) + 10), 0xffffff)
 
+                    # クレジット
+                    information += "\n\n-# 画像引用元: deviantart.com/biochao"
+
                     embed = discord.Embed(title=f"{selected_card_label}",
                                           description=information,
                                           color=color)
@@ -493,7 +499,7 @@ class PokePoke(commands.Cog):
                     print(traceback.format_exc())
 
             select.callback = select_callback
-            view = discord.ui.View(timeout=300)
+            view = discord.ui.View(timeout=600)
             view.add_item(select)
 
             # タイムアウト後の処理

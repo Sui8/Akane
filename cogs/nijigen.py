@@ -151,7 +151,7 @@ class Nijigen(commands.Cog):
             await self.dbm.log_command(ctx.user.id, "animesearch", "(Image)", ctx.guild.id if ctx.guild else None, result="Success")
 
     # クールダウン
-
+    '''
     @danbooru.error
     async def danbooru_on_command_error(self, ctx: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.checks.CommandOnCooldown):
@@ -163,6 +163,7 @@ class Nijigen(commands.Cog):
                                   color=0xff0000)
             embed.set_footer(text=f"Report ID: {ctx.id}")
             return await ctx.response.send_message(embed=embed, ephemeral=True)
+    '''
 
     #########################
 
