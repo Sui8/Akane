@@ -440,8 +440,8 @@ class Akane_ai(commands.Cog):
             status_ = "未利用"
 
         embed = discord.Embed(title=f"Akane AI 統計 (@{ctx.user.name})",
-                              description=f"**総会話回数**: {message_count}回\n**現在のキャラクターとの会話履歴**: 直近{saving_count.get(chara, 0)}回保存中"
-                                          f" (総合: {saving_count.get("all", 0)}回保存中)\n"
+                              description=f"**総会話回数**: {message_count:,}回\n**現在のキャラクターとの会話履歴**: 直近{saving_count.get(chara, 0):,}回保存中"
+                                          f" (総合: {saving_count.get("all", 0):,}回保存中)\n"
                                           f"**キャラクター**: {present_chara}\n**ステータス**: {status_}",
                               color=discord.Colour.red())
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
@@ -462,11 +462,16 @@ class Akane_ai(commands.Cog):
             return
 
         async with self.dbm.pool.acquire() as conn:
-            saving_count, chara = await conn.fetchval("""
+            result = await conn.fetch("""
                 SELECT saving_count, chara
                 FROM ai_talk_data 
                 WHERE user_id = $1
             """, ctx.user.id)
+
+        # 取り出し
+        record = result[0]
+        saving_count = json.loads(record["saving_count"])
+        chara = record["chara"]
 
         # アカウント登録済みか
         if saving_count:
@@ -745,7 +750,6 @@ class Akane_ai(commands.Cog):
                             await message.reply(embed=embed)
 
                         content = message.content
-                        print(history)
                         
                         # Geminiにデータ投げる
                         response, iofile = gemini(content, 0, history, chara)
