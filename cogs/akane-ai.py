@@ -138,7 +138,7 @@ def gemini(text, flag, attachment, chara):
     flag : int
         0: text, 1: image
     attachment : all
-        flag = 0: history(list), flag = 1: image(image)
+        flag = 0: history(list), flag = 1: image(list)
     chara : str
         キャラクター
 
@@ -224,10 +224,7 @@ def gemini(text, flag, attachment, chara):
                 model=AIMODEL_NAME,
                 contents=[
                     text,
-                    types.Part.from_bytes(
-                        data=attachment,
-                        mime_type='image/jpeg'
-                    )
+                    *attachment,
                 ],
                 config=types.GenerateContentConfig(
                     safety_settings=safety_settings,
@@ -248,11 +245,11 @@ def gemini(text, flag, attachment, chara):
             # 正規表現で@everyone、@here、ユーザー宛てメンションを抽出
             pattern = r"(@everyone|@here|<@!?[0-9]+>)"
             formated_response = re.sub(pattern, r"`\1`", formated_response)
-            formated_response = re.sub(r'(\n){3,}', '\n', formated_response[0])
+            formated_response = re.sub(r'(\n){3,}', '\n', formated_response)
             formated_response = formated_response.splitlines()
 
             formated_response = [item for item in formated_response if item.strip()]
-
+            
             if len(formated_response) <= 15:
                 iofile = None
                 final_response = "\n".join(formated_response)
@@ -285,13 +282,13 @@ class SelectView(View):
             discord.SelectOption(label="人狼（β版）", value="jinrou", description="人狼ゲーム"),
             discord.SelectOption(label="ずんだもん", value="zundamon", description="ずんずんPJ"),
             discord.SelectOption(label="アナゴさん", value="anagosan", description="サザエさん"),
-            discord.SelectOption(label="ひろゆき", value="hiroyuki", description="2ちゃんねるの創設者"),
+            discord.SelectOption(label="ひろゆき", value="hiroyuki", description="2ちゃんねる"),
             discord.SelectOption(label="古明地こいし", value="koishi", description="東方Project"),
             discord.SelectOption(label="後藤ひとり", value="bocchi", description="ぼっち・ざ・ろっく！ [新システム]"),
             discord.SelectOption(label="ベジータ", value="vegeta", description="ドラゴンボール [新システム]"),
             discord.SelectOption(label="博麗霊夢", value="reimu", description="東方Project [新システム]"),
             discord.SelectOption(label="霧雨魔理沙", value="marisa", description="東方Project [新システム]"),
-            discord.SelectOption(label="野獣先輩", value="yaju", description="真夏の夜の淫夢 [新システム]"),
+            discord.SelectOption(label="野獣先輩", value="yaju", description="淫夢ファミリー [新システム]"),
             discord.SelectOption(label="牧瀬紅莉栖", value="kurisu", description="STEINS;GATE [新システム]"),
             discord.SelectOption(label="サトシ", value="satoshi", description="ポケットモンスター [新システム]")
         ],
@@ -580,7 +577,6 @@ class Akane_ai(commands.Cog):
 
             embed = discord.Embed(title=f"キャラクター変更",
                                   description=f"現在のキャラクター: **{present_chara}**\n"
-                                               ":warning: キャラクターを変更すると保存中の会話履歴が全て消去されます\n"
                                                "※以下の変更ボタンは60秒でタイムアウトします",
                                   color=discord.Colour.red())
             await ctx.followup.send(embed=embed, view=view, ephemeral=False)
@@ -648,14 +644,19 @@ class Akane_ai(commands.Cog):
                     async with aiohttp.ClientSession() as session:
                         for attachment in message.attachments:
                             if attachment.content_type in IMAGE_TYPES:
-                                # attachment.urlから画像DL
                                 async with session.get(attachment.url) as resp:
                                     if resp.status == 200:
                                         img_bytes = await resp.read()
-                                        image_parts.append(
-                                            types.Part.from_bytes(
-                                                data=img_bytes,
-                                                mime_type=attachment.content_type))
+
+                                        part = types.Part.from_bytes(
+                                            data=img_bytes,
+                                            mime_type=attachment.content_type  # よーわからん
+                                        )
+                                        image_parts.append(part)
+
+                                        # とりあえず最大4枚まで
+                                        if len(image_parts) >= 4:
+                                            break
                     
                     # 画像があるとき
                     if image_parts:
@@ -663,13 +664,22 @@ class Akane_ai(commands.Cog):
                         async with self.dbm.pool.acquire() as conn:
                             try:
                                 result = await conn.fetchrow("""
-                                            SELECT chara FROM ai_talk_data WHERE user_id = $1
+                                            SELECT chara, saving_count FROM ai_talk_data WHERE user_id = $1
                                         """, message.author.id)
 
                             except Exception as e:
                                 import traceback
                                 print(traceback.format_exc())
-                                result = "akane"
+                                result = ["akane", json.loads({"all": 0, "akane": 0})]
+
+                        # 会話歴あり
+                        if result:
+                            chara, saving_count = result
+                            saving_count = json.loads(saving_count)
+                        
+                        else:
+                            chara = "akane"
+                            saving_count = json.loads({"all": 0, "akane": 0})
 
                         # メッセージが空か
                         if len(message.content) == 0:
@@ -678,8 +688,9 @@ class Akane_ai(commands.Cog):
                         else:
                             content = message.content
 
-                        # 今は画像1枚しか投げられない
-                        response, iofile = gemini(content, 1, image_parts[0], result)
+                        # 今は画像4枚までしか投げられない
+                        mode = "image"
+                        response, iofile = gemini(content, 1, image_parts, chara)
 
                     # 画像がない (テキスト) or 読み込めない場合
                     else:
@@ -752,6 +763,7 @@ class Akane_ai(commands.Cog):
                         content = message.content
                         
                         # Geminiにデータ投げる
+                        mode = "text"
                         response, iofile = gemini(content, 0, history, chara)
 
                 # 正常な返答があれば履歴保存
@@ -759,15 +771,17 @@ class Akane_ai(commands.Cog):
                     # 履歴保存
                     if len(response[1]) > 0:
                         talk_data = [{"role": "user", "parts": [{"text": content}]}, {"role": "model", "parts": [{"text": response[1]}]}]
+                        
+                        # (画像モードのときはスキップしておく)
+                        if mode == "text":
+                            # ログ保存数が300件未満か
+                            if saving_count.get(chara, 0) < 300:
+                                saving_count.setdefault(chara, 0)
+                                saving_count[chara] += 1
 
-                        # ログ保存数が300件未満か
-                        if saving_count.get(chara, 0) < 300:
-                            saving_count.setdefault(chara, 0)
-                            saving_count[chara] += 1
-
-                        if saving_count.get("all", 0) < 300:
-                            saving_count.setdefault("all", 0)
-                            saving_count["all"] += 1
+                            if saving_count.get("all", 0) < 300:
+                                saving_count.setdefault("all", 0)
+                                saving_count["all"] += 1
 
                         async with self.dbm.pool.acquire() as conn:
                             async with conn.transaction():
