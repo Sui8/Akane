@@ -42,7 +42,7 @@ DEFAULT_MODEL_CREDIT = 1
 MODELS = {"default": ["Gemini 2.0 Flash", 1, ["user", "vip", "admin"]],
           "gemini-2.5-flash-preview-04-17": ["Gemini 2.5 Flash (Preview 04-17)", 3, ["vip", "admin"]],
           "gemini-2.0-flash-lite": ["Gemini 2.0 Flash-Lite", 1, ["user", "vip", "admin"]],
-          "gemini-2.0-flash-preview-image-generation": ["Gemini 2.0 Flesh (Preview 画像生成)", 15, ["vip", "admin"]],
+          "gemini-2.0-flash-preview-image-generation": ["Gemini 2.0 Flash (Preview 画像生成)", 15, ["vip", "admin"]],
           "gemini-1.5-flash": ["Gemini 1.5 Flash", 3, ["user", "vip", "admin"]],
           "gemini-1.5-flash-8b": ["Gemini 1.5 Flash-8B", 3, ["user", "vip", "admin"]]}
 
