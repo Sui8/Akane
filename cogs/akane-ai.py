@@ -68,6 +68,7 @@ IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp",
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB (バイト)
 
 AI_ROLES = {"user": ["一般", 50], "vip": ["VIP", 350], "admin": ["管理者", 10000]}
+AI_STATUS = ["active", "banned"]
 
 # Prompts
 CHARACTERS = {
@@ -193,6 +194,9 @@ def gemini(text, flag, attachment, chara, ai_model):
                     image_bytes = io.BytesIO(image.data)
                     image_bytes.seek(0)
 
+                else:
+                    image_bytes = None
+
                 # 返答の調整
                 # 改行の削除
                 formated_response = text
@@ -315,6 +319,9 @@ def gemini(text, flag, attachment, chara, ai_model):
                 if image:
                     image_bytes = io.BytesIO(image.data)
                     image_bytes.seek(0)
+
+                else:
+                    image_bytes = None
 
                 # 返答の調整
                 # 改行の削除
@@ -500,12 +507,12 @@ class ModelSelectView(View):
         placeholder="AIモデルを選択",
         disabled=False,
         options=[
-            discord.SelectOption(label="Gemini 2.0 Flash", value="default", description="通常の会話向け (デフォルト)"),
-            discord.SelectOption(label="Gemini 2.5 Flash (Preview 04-17)", value="gemini-2.5-flash-preview-04-17", description="高性能、高レート制限 [VIP限定]"),
-            discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 [VIP限定]"),
-            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量"),
-            discord.SelectOption(label="Gemini 1.5 Flash", value="gemini-1.5-flash", description="以前のバージョン"),
-            discord.SelectOption(label="Gemini 1.5 Flash-8B", value="gemini-1.5-flash-8b", description="低知能タスク向け")
+            discord.SelectOption(label="Gemini 2.0 Flash", value="default", description="通常の会話向け (デフォルト) [1クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Flash (Preview 04-17)", value="gemini-2.5-flash-preview-04-17", description="高性能、高レート制限 (VIP限定) [3クレジット]"),
+            discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 (VIP限定) [15クレジット]"),
+            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [3クレジット]"),
+            discord.SelectOption(label="Gemini 1.5 Flash", value="gemini-1.5-flash", description="以前のバージョン [3クレジット]"),
+            discord.SelectOption(label="Gemini 1.5 Flash-8B", value="gemini-1.5-flash-8b", description="低知能タスク向け [3クレジット]")
         ],
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
@@ -960,7 +967,7 @@ class Akane_ai(commands.Cog):
                         async with self.dbm.pool.acquire() as conn:
                             try:
                                 result = await conn.fetchrow("""
-                                            SELECT chara, saving_count, ai_model, role, credit, last_message FROM ai_talk_data WHERE user_id = $1
+                                            SELECT chara, saving_count, status, ai_model, role, credit, last_message FROM ai_talk_data WHERE user_id = $1
                                         """, message.author.id)
 
                             except Exception as e:
@@ -970,8 +977,18 @@ class Akane_ai(commands.Cog):
 
                         # 会話歴あり
                         if result:
-                            chara, saving_count, ai_model, role, credit, last_message = result
+                            chara, saving_count, status, ai_model, role, credit, last_message = result
                             saving_count = json.loads(saving_count)
+
+                            # BANされてるか
+                            if status == "banned":
+                                try:
+                                    await message.add_reaction("❌")
+
+                                except Exception:
+                                    pass
+
+                                return
 
                             # 日付チェックしてクレジット補給後、クレジットが足りるか確認
                             today = datetime.datetime.now().date()
@@ -1035,7 +1052,7 @@ class Akane_ai(commands.Cog):
                         async with self.dbm.pool.acquire() as conn:
                             try:
                                 result = await conn.fetchrow("""
-                                    SELECT chara, saving_count, ai_model, role, credit, last_message FROM ai_talk_data WHERE user_id = $1
+                                    SELECT chara, saving_count, status, ai_model, role, credit, last_message FROM ai_talk_data WHERE user_id = $1
                                 """, message.author.id)
 
                             except Exception as e:
@@ -1045,9 +1062,19 @@ class Akane_ai(commands.Cog):
 
                         # 会話歴あり
                         if result:
-                            chara, saving_count, ai_model, role, credit, last_message = result
+                            chara, saving_count, status, ai_model, role, credit, last_message = result
                             saving_count = json.loads(saving_count)
                             history = []
+
+                            # BANされてるか
+                            if status == "banned":
+                                try:
+                                    await message.add_reaction("❌")
+
+                                except Exception:
+                                    pass
+
+                                return
 
                             # 日付チェックしてクレジット補給後、クレジットが足りるか確認
                             today = datetime.datetime.now().date()
@@ -1302,6 +1329,40 @@ class Akane_ai(commands.Cog):
                         return
 
             await ctx.reply(f':white_check_mark: `{userid}`のロールを`{AI_ROLES[new_role][0]} ("{new_role}")`に変更しました', mention_author=False)
+
+        else:
+            await ctx.reply(":x: そのユーザーのデータは作成されていません", mention_author=False)
+
+    # ai_status
+
+    @commands.command()
+    @commands.is_owner()
+    async def ai_status(self, ctx: discord.Interaction, userid: int, status: str):
+        if not status in AI_STATUS.keys():
+            await ctx.reply(":x: そのステータスは存在しません", mention_author=False)
+            return
+
+        # DBでuser_idが存在するか確認
+        async with self.dbm.pool.acquire() as conn:
+            result = await conn.fetchval('SELECT status FROM ai_talk_data WHERE user_id = $1', userid)
+
+        if result:
+            new_status = status.lower()
+
+            async with self.dbm.pool.acquire() as conn:
+                async with conn.transaction():
+                    try:
+                        await conn.execute('''
+                                           UPDATE ai_talk_data
+                                           SET status = $1
+                                           WHERE user_id = $2
+                                           ''', new_status, userid)
+
+                    except Exception as e:
+                        await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
+                        return
+
+            await ctx.reply(f':white_check_mark: `{userid}`のステータスを`{new_status}`に変更しました', mention_author=False)
 
         else:
             await ctx.reply(":x: そのユーザーのデータは作成されていません", mention_author=False)
