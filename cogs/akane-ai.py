@@ -931,7 +931,7 @@ class Akane_ai(commands.Cog):
             return
 
         # メイン処理
-        if message.channel.name == "akane-ai2":
+        if message.channel.name == "akane-ai":
             try:
                 async with message.channel.typing():
                     # 添付ファイルの処理
