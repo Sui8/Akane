@@ -21,8 +21,8 @@ load_dotenv()  # .env読み込み
 
 ''' 定数群 '''
 
-UR7_USERNAME = os.getenv("UR7_USERNAME")  # ur7.cc
-UR7_PASSWORD = os.getenv("UR7_PASSWORD")  # ur7.cc
+# UR7_USERNAME = os.getenv("UR7_USERNAME")  # ur7.cc
+# UR7_PASSWORD = os.getenv("UR7_PASSWORD")  # ur7.cc
 SHORTIO_KEY = os.getenv("SHORTIO_KEY")  # short.io
 
 ##################################################
@@ -101,12 +101,9 @@ class Web(commands.Cog):
     @app_commands.describe(host="使用するドメイン")
     @app_commands.choices(host=[
         discord.app_commands.Choice(name="is.gd", value="isgd"),
-        discord.app_commands.Choice(name="x3.f5.si", value="shortio"),
-        discord.app_commands.Choice(name="ur7.cc", value="ur7")])
-    @ephemeral_check
+        discord.app_commands.Choice(name="x3.f5.si", value="shortio")])
     @restrict_check
     async def short(self, ctx: discord.Interaction, url: str, host: str = None):
-        ephemeral = ctx.extras.get('ephemeral', False)
 
         await ctx.response.defer()
 
@@ -136,19 +133,22 @@ class Web(commands.Cog):
                 return
 
         # ur7.cc
-        elif host == "ur7":
-            res = requests.post(
-            f"https://ur7.cc/yourls-api.php?username={UR7_USERNAME}&password={UR7_PASSWORD}&action=shorturl&format=json&url={url}"
-            )
+        # 現在は応急処置
+            '''
+            elif host == "ur7":
+                res = requests.post(
+                f"https://ur7.cc/yourls-api.php?username={UR7_USERNAME}&password={UR7_PASSWORD}&action=shorturl&format=json&url={url}"
+                )
 
-            try:
-                data = res.json()
-                short_link = json.dumps(res["shorturl"])
+                try:
+                    data = res.json()
+                    short_link = json.dumps(res["shorturl"])
 
-            except Exception:
-                await send_error(ctx, None, "エラーが発生しました。\nしばらく時間をおいてからお試しください。", None, is_followup=True)
-                await self.dbm.log_command(ctx.user.id, "short", [url, host], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
-                return
+                except Exception:
+                    await send_error(ctx, None, "エラーが発生しました。\nしばらく時間をおいてからお試しください。", None, is_followup=True)
+                    await self.dbm.log_command(ctx.user.id, "short", [url, host], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
+                    return
+            '''
 
         # is.gd
         else:
