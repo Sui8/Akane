@@ -39,12 +39,12 @@ DEFAULT_MODEL = "gemini-2.0-flash"
 DEFAULT_MODEL_NAME = "Gemini 2.0 Flash"
 DEFAULT_MODEL_CREDIT = 1
 
-MODELS = {"default": ["Gemini 2.0 Flash", 1, ["user", "vip", "admin"]],
-          "gemini-2.5-flash-preview-04-17": ["Gemini 2.5 Flash (Preview 04-17)", 3, ["vip", "admin"]],
-          "gemini-2.0-flash-lite": ["Gemini 2.0 Flash-Lite", 1, ["user", "vip", "admin"]],
-          "gemini-2.0-flash-preview-image-generation": ["Gemini 2.0 Flash (Preview 画像生成)", 15, ["vip", "admin"]],
-          "gemini-1.5-flash": ["Gemini 1.5 Flash", 3, ["user", "vip", "admin"]],
-          "gemini-1.5-flash-8b": ["Gemini 1.5 Flash-8B", 3, ["user", "vip", "admin"]]}
+MODELS = {"default": ["Gemini 2.0 Flash", 1, ["free", "basic", "pro", "enterprise"]],
+          "gemini-2.5-flash-preview-04-17": ["Gemini 2.5 Flash (Preview 04-17)", 3, ["basic", "pro", "enterprise"]],
+          "gemini-2.0-flash-lite": ["Gemini 2.0 Flash-Lite", 1, ["free", "basic", "pro", "enterprise"]],
+          "gemini-2.0-flash-preview-image-generation": ["Gemini 2.0 Flash (Preview 画像生成)", 15, ["basic", "pro", "enterprise"]],
+          "gemini-1.5-flash": ["Gemini 1.5 Flash", 3, ["free", "basic", "pro", "enterprise"]],
+          "gemini-1.5-flash-8b": ["Gemini 1.5 Flash-8B", 3, ["free", "basic", "pro", "enterprise"]]}
 
 IMAGE_MODELS = ["gemini-2.0-flash-preview-image-generation"]
 
@@ -67,7 +67,7 @@ IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp",
 
 MAX_FILE_SIZE = 15 * 1024 * 1024  # 15MB (バイト)
 
-AI_ROLES = {"user": ["一般", 50], "vip": ["VIP", 350], "admin": ["管理者", 10000]}
+AI_ROLES = {"free": ["Free", 50], "basic": ["Basic", 150], "pro": ["Pro", 350], "enterprise": ["Enterprise", 10000]}
 AI_STATUS = ["active", "banned"]
 
 # Prompts
@@ -508,9 +508,9 @@ class ModelSelectView(View):
         disabled=False,
         options=[
             discord.SelectOption(label="Gemini 2.0 Flash", value="default", description="通常の会話向け (デフォルト) [1クレジット]"),
-            discord.SelectOption(label="Gemini 2.5 Flash (Preview 04-17)", value="gemini-2.5-flash-preview-04-17", description="高性能、高レート制限 (VIP限定) [3クレジット]"),
-            discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 (VIP限定) [15クレジット]"),
-            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [3クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Flash (Preview 04-17)", value="gemini-2.5-flash-preview-04-17", description="高性能、高レート制限 (Basic以上限定) [3クレジット]"),
+            discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 (Basic以上限定) [15クレジット]"),
+            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [1クレジット]"),
             discord.SelectOption(label="Gemini 1.5 Flash", value="gemini-1.5-flash", description="以前のバージョン [3クレジット]"),
             discord.SelectOption(label="Gemini 1.5 Flash-8B", value="gemini-1.5-flash-8b", description="低知能タスク向け [3クレジット]")
         ],
@@ -957,8 +957,8 @@ class Akane_ai(commands.Cog):
                                         )
                                         image_parts.append(part)
 
-                                        # とりあえず最大4枚まで
-                                        if len(image_parts) >= 4:
+                                        # とりあえず最大5枚まで
+                                        if len(image_parts) >= 5:
                                             break
                     
                     # 画像があるとき
@@ -973,7 +973,7 @@ class Akane_ai(commands.Cog):
                             except Exception as e:
                                 import traceback
                                 print(traceback.format_exc())
-                                result = ["akane", json.loads({"all": 0, "akane": 0}), DEFAULT_MODEL, "user", 0, datetime.datetime.now()]
+                                result = ["akane", json.loads({"all": 0, "akane": 0}), DEFAULT_MODEL, "free", 0, datetime.datetime.now()]
 
                         # 会話歴あり
                         if result:
@@ -1022,7 +1022,7 @@ class Akane_ai(commands.Cog):
                                         await conn.execute(''' 
                                             INSERT INTO ai_talk_data (user_id, message_count, saving_count, chara, status, ai_model, role, credit, last_message)
                                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active", "default", "user", max(AI_ROLES["user"] - credit_per["default"][1], 0))
+                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active", "default", "free", max(AI_ROLES["free"] - credit_per["default"][1], 0))
 
                                     except Exception:
                                         await message.reply(":x: システムエラーが発生しました。時間を空けてお試しください。",
@@ -1039,7 +1039,7 @@ class Akane_ai(commands.Cog):
                         else:
                             content = message.content
 
-                        # 今は画像4枚までしか投げられない
+                        # 今は画像5枚までしか投げられない
                         mode = "image"
                         response, iofile, file_type = gemini(content, 1, image_parts, chara, ai_model)
 
@@ -1058,7 +1058,7 @@ class Akane_ai(commands.Cog):
                             except Exception as e:
                                 import traceback
                                 print(traceback.format_exc())
-                                result = ["akane", json.loads({"all": 0, "akane": 0}), DEFAULT_MODEL, "user", 0, datetime.datetime.now()]
+                                result = ["akane", json.loads({"all": 0, "akane": 0}), DEFAULT_MODEL, "free", 0, datetime.datetime.now()]
 
                         # 会話歴あり
                         if result:
@@ -1130,7 +1130,7 @@ class Akane_ai(commands.Cog):
                                         await conn.execute(''' 
                                             INSERT INTO ai_talk_data (user_id, message_count, saving_count, chara, status, ai_model, role, credit, last_message)
                                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active", "default", "user", max(AI_ROLES["user"] - credit_per["default"][1], 0))
+                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active", "default", "free", max(AI_ROLES["free"] - credit_per["default"][1], 0))
 
                                     except Exception:
                                         await message.reply(":x: システムエラーが発生しました。時間を空けてお試しください。",
@@ -1219,24 +1219,31 @@ class Akane_ai(commands.Cog):
                     # エラーログ出力
                     if str(response[1]).startswith("429"):
                         embed = discord.Embed(title="混雑中",
-                                            description="Akane AIが混雑しています。しばらくお待ちください。",
-                                            color=0xff0000)
+                                              description="Akane AIが混雑しています。しばらくお待ちください。",
+                                              color=0xff0000)
                         embed.set_footer(text=f"Report ID: {message.id}")
                         await message.reply(embed=embed, mention_author=False)
 
                     elif str(response[1]).startswith("500"):
                         embed = discord.Embed(title="混雑中またはエラー",
-                                            description="サーバーが混雑しているか、内部エラーが発生しています。\n"
-                                                        "**30分～1時間程度**時間を空けると完全に解決される場合がありますが、このままご利用いただけます。",
-                                            color=0xff0000)
+                                              description="サーバーが混雑しているか、内部エラーが発生しています。\n"
+                                                          "**30分～1時間程度**時間を空けると完全に解決される場合がありますが、このままご利用いただけます。",
+                                              color=0xff0000)
+                        embed.set_footer(text=f"Report ID: {message.id}")
+                        await message.reply(embed=embed, mention_author=False)
+
+                    elif str(response[1]).startswith("503"):
+                        embed = discord.Embed(title="混雑中",
+                                              description="Akane AIが混雑しています。AIモデルを変更してください。\n",
+                                              color=0xff0000)
                         embed.set_footer(text=f"Report ID: {message.id}")
                         await message.reply(embed=embed, mention_author=False)
 
                     # 例外エラー
                     else:
                         embed = discord.Embed(title="エラー",
-                                            description="不明なエラーが発生しました。しばらく時間を空けるか、不適切な内容を削除してください。",
-                                            color=0xff0000)
+                                              description="不明なエラーが発生しました。しばらく時間を空けるか、不適切な内容を削除してください。",
+                                              color=0xff0000)
                         embed.set_footer(text=f"Report ID: {message.id}")
                         await message.reply(embed=embed, mention_author=False)
 
@@ -1249,9 +1256,9 @@ class Akane_ai(commands.Cog):
                     # エラーを専用チャンネルに投げておく
                     error_log = self.bot.get_channel(self.bot.ERROR_LOG)
                     embed = discord.Embed(title="エラー",
-                                        description="AIチャットにてエラーが発生しました。",
-                                        timestamp=datetime.datetime.now(),
-                                        color=0xff0000)
+                                          description="AIチャットにてエラーが発生しました。",
+                                          timestamp=datetime.datetime.now(),
+                                          color=0xff0000)
                     embed.add_field(name="メッセージ内容", value=value)
                     embed.add_field(name="エラー内容", value=response[1])
                     embed.add_field(name="ギルドとチャンネル", value=f"{message.guild.name} (ID: {message.guild.id})\n#{message.channel.id}")
@@ -1259,6 +1266,7 @@ class Akane_ai(commands.Cog):
                     embed.set_footer(text=f"Report ID: {message.id}")
                     await error_log.send(embed=embed)
                     return
+
             except Exception as e:
                 import traceback
                 print(traceback.format_exc())
@@ -1338,7 +1346,7 @@ class Akane_ai(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def ai_status(self, ctx: discord.Interaction, userid: int, status: str):
-        if not status in AI_STATUS.keys():
+        if not status in AI_STATUS:
             await ctx.reply(":x: そのステータスは存在しません", mention_author=False)
             return
 
