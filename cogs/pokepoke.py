@@ -41,8 +41,9 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "A1": "[A1] 最強の遺伝子", "A1a": "[A1a] 幻のいる島", "A21": "[A2] 時空の激闘 ディアルガ", "A22": "[A2] 時空の激闘 パルキア",
                       "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
                       "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
+                      "A3a": "[A3a] 異次元クライシス",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
-                      "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7",
+                      "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
 major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32"]
 promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "ATS", "APS", "ACP", "AMS", "AGC"]
@@ -199,6 +200,7 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[A3a] 異次元クライシス", value="A3a"),
         discord.app_commands.Choice(name="[A3] 双天の守護者 ソルガレオ", value="A31"),
         discord.app_commands.Choice(name="[A3] 双天の守護者 ルナアーラ", value="A32"),
         discord.app_commands.Choice(name="[A2b] シャイニングハイ", value="A2b"),
@@ -209,6 +211,7 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 リザードン", value="A11"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ミュウツー", value="A12"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ピカチュウ", value="A13"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.8", value="A3p2"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.7", value="A3p"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.6", value="A2bp"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.5", value="A2ap"),
