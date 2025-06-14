@@ -358,7 +358,8 @@ class PokePoke(commands.Cog):
                     GREATEST(
                         similarity(c.card_name, $1),
                         similarity(c.card_name, $2),
-                        similarity(c.card_name, $3)
+                        similarity(c.card_name, $3),
+                        similarity(c.card_name, $4)
                     ) AS similarity_score
                 FROM cards c
                 LEFT JOIN card_specs cs ON c.spec_id = cs.spec_id
@@ -367,7 +368,7 @@ class PokePoke(commands.Cog):
                 WHERE c.card_name ILIKE $1 OR c.card_name ILIKE $2 OR c.card_name ILIKE $3
                 ORDER BY similarity_score DESC, c.card_id 
                 LIMIT 25
-            """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%")
+            """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%", f"%{name}%")
 
         if not result:
             embed = discord.Embed(title=":x: 検索失敗",
@@ -464,6 +465,8 @@ class PokePoke(commands.Cog):
 
                         # ワザ
                         if selected_card['ability_name']:
+                            information += "────────────"
+
                             # energy
                             energy_list = ast.literal_eval(selected_card['ability_energy'])
                             energy = "".join(energy_mapping[str(x)] for x in energy_list)
@@ -475,7 +478,7 @@ class PokePoke(commands.Cog):
                             else:
                                 damage_type = ""
 
-                            information += f"\n\n**{energy} {selected_card['ability_name']} {selected_card['ability_damage'] if selected_card['ability_damage'] is not None else ''}{damage_type}**"
+                            information += f"\n**{energy} {selected_card['ability_name']} {selected_card['ability_damage'] if selected_card['ability_damage'] is not None else ''}{damage_type}**"
 
                             if selected_card['ability_desc']:
                                 information += f"\n{selected_card['ability_desc']}"
