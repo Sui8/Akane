@@ -344,29 +344,50 @@ class PokePoke(commands.Cog):
             # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
             # ついでにidが存在するデータも取りに行く
             result = await conn.fetch(f"""
-                SELECT c.card_name, c.card_id, c.rarity, c.hp, c.type, c.cardtype, 
+                SELECT 
+                    c.card_name, c.card_id, c.rarity, c.hp, c.type, c.cardtype, 
                     c.evolution_from, c.description, 
                     COALESCE(cs.description, c.spec_id::TEXT) AS spec_desc,
                     COALESCE(sk.description, NULL) AS skill_desc,
                     COALESCE(sk.skill_name, NULL) AS skill_name,
-                    COALESCE(ca.description, NULL) AS ability_desc,
-                    COALESCE(ca.ability_name, NULL) AS ability_name,
-                    COALESCE(ca.damage, NULL) AS ability_damage,
-                    COALESCE(ca.damage_type, NULL) AS ability_damage_type,  
-                    COALESCE(ca.energy, NULL) AS ability_energy,
+                    
+                    ARRAY_AGG(COALESCE(ca.ability_name, 'None')) AS ability_name,
+                    ARRAY_AGG(COALESCE(ca.description, 'None')) AS ability_desc,
+                    ARRAY_AGG(COALESCE(ca.damage::TEXT, 'None')) AS ability_damage,
+                    ARRAY_AGG(COALESCE(ca.damage_type::TEXT, 'None')) AS ability_damage_type,
+
+                    ARRAY_AGG(
+                        CASE
+                            WHEN ca.energy IS NULL THEN ARRAY['None']::TEXT[]
+                            ELSE ARRAY[ca.energy]
+                        END
+                    ) AS ability_energy,
+
                     c.away, c.effective, c.pack,
+
                     GREATEST(
                         similarity(c.card_name, $1),
                         similarity(c.card_name, $2),
                         similarity(c.card_name, $3),
                         similarity(c.card_name, $4)
                     ) AS similarity_score
+
                 FROM cards c
                 LEFT JOIN card_specs cs ON c.spec_id = cs.spec_id
                 LEFT JOIN card_skills sk ON c.skill_id = sk.skill_id
-                LEFT JOIN card_abilities ca ON ca.ability_id = CAST(c.ability_id[1] AS INTEGER)
-                WHERE c.card_name ILIKE $1 OR c.card_name ILIKE $2 OR c.card_name ILIKE $3
-                ORDER BY similarity_score DESC, c.card_id 
+                LEFT JOIN card_abilities ca ON ca.ability_id = ANY(c.ability_id)
+
+                WHERE c.card_name ILIKE $1
+                OR c.card_name ILIKE $2
+                OR c.card_name ILIKE $3
+                OR c.card_name ILIKE $4
+
+                GROUP BY 
+                    c.card_id, c.card_name, c.rarity, c.hp, c.type, c.cardtype, 
+                    c.evolution_from, c.description, cs.description, c.spec_id,
+                    sk.description, sk.skill_name, c.away, c.effective, c.pack
+
+                ORDER BY similarity_score DESC, c.card_id
                 LIMIT 25
             """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%", f"%{name}%")
 
@@ -450,47 +471,88 @@ class PokePoke(commands.Cog):
 
                     # ポケモンの場合
                     elif int(selected_card['cardtype']) >= 4:
-                        information += f" / {energy_mapping.get(str(selected_card['type']), '不明')}\n"
-                        information += f"【HP】{selected_card['hp']}\n"
-                        information += f"【弱点】{energy_mapping.get(str(selected_card['effective']), '')}\n"
+                        information += f" / HP {selected_card['hp']} {energy_mapping.get(str(selected_card['type']), '不明')}\n"
+                        information += "────────────\n"
 
-                        if selected_card['away'] >= 0:
-                            information += f"【にげる】{'<:Colorless_Energy:1368064742668894238>' * int(selected_card['away'])}\n"
+                        # 特性
+                        if selected_card['skill_name']:
+                            skill_information = f"**[特性] {selected_card['skill_name']}**\n"
+
+                            # 必ずあるけどエラー対策
+                            if selected_card['skill_desc']:
+                                skill_information += f"{selected_card['skill_desc']}\n\n"
+
+                            else:
+                                skill_information += "不明\n\n"
+
+                            # informationに合成する
+                            information += skill_information
+
+                        # ワザ
+                        if selected_card['ability_name'][0] != "None":
+                            abilities_information = []
+
+                            # ワザの個数分だけデータ追加
+                            for i in range(len(selected_card['ability_name'])):
+                                # energy
+                                energy_list = ast.literal_eval(selected_card['ability_energy'][i][0])
+                                energy = "".join(energy_mapping[str(x)] for x in energy_list)
+
+                                # damage_type
+                                if selected_card['ability_damage_type'][i] != "None":
+                                    damage_type = damage_type_mapping.get(str(selected_card['ability_damage_type'][i]), "")
+
+                                else:
+                                    damage_type = ""
+
+                                ability_information = f"**{energy} {selected_card['ability_name'][i]} {selected_card['ability_damage'][i] if selected_card['ability_damage'][i] != "None" else ''}{damage_type}**"
+
+                                if selected_card['ability_desc'][i] != "None":
+                                    ability_information += f"\n{selected_card['ability_desc'][i]}"
+
+                                abilities_information.append(ability_information)
+
+                            # informationに合成する
+                            information += "\n\n".join(abilities_information)
+
+                        else:
+                            information += "特性・ワザ情報不明"
+
+                        information += "\n────────────\n"
 
                         # 進化ポケモン
                         if str(selected_card['cardtype']) in ["5", "6", "8", "9"]:
                             information += f"【進化元】{selected_card['evolution_from']}\n"
 
+                        # 弱点
+                        flee = energy_mapping.get(str(selected_card['effective']), '')
+
+                        if flee:
+                            information += f"【弱点】{flee}+20\n"
+
+                        else:
+                            information += f"【弱点】\n"
+
+                        if selected_card['away'] >= 0:
+                            information += f"【にげる】{'<:Colorless_Energy:1368064742668894238>' * int(selected_card['away'])}\n"
+
                         information += f"【入手方法】{get_source_mapping.get(str(selected_card['pack']), '不明')}"
-
-                        # ワザ
-                        if selected_card['ability_name']:
-                            information += "────────────"
-
-                            # energy
-                            energy_list = ast.literal_eval(selected_card['ability_energy'])
-                            energy = "".join(energy_mapping[str(x)] for x in energy_list)
-
-                            # damage_type
-                            if selected_card['ability_damage_type']:
-                                damage_type = damage_type_mapping.get(str(selected_card['ability_damage_type']), "")
-
-                            else:
-                                damage_type = ""
-
-                            information += f"\n**{energy} {selected_card['ability_name']} {selected_card['ability_damage'] if selected_card['ability_damage'] is not None else ''}{damage_type}**"
-
-                            if selected_card['ability_desc']:
-                                information += f"\n{selected_card['ability_desc']}"
 
                         color = type_color_mapping.get(str(selected_card['type']), 0xffffff)
 
                     # それ以外の場合
                     else:
-                        information += f"\n【入手方法】{get_source_mapping.get(str(selected_card['pack']), '不明')}"
+                        information += "\n────────────\n"
 
                         if selected_card['spec_desc']:
-                            information += f"\n\n【効果】{selected_card['spec_desc']}"
+                            information += f"{selected_card['spec_desc']}\n"
+
+                        else:
+                            information += "効果不明\n"
+
+                        information += "────────────\n"
+
+                        information += f"【入手方法】{get_source_mapping.get(str(selected_card['pack']), '不明')}"
 
                         color = type_color_mapping.get(str(int(selected_card['cardtype']) + 10), 0xffffff)
 
