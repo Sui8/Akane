@@ -40,7 +40,8 @@ DEFAULT_MODEL_NAME = "Gemini 2.0 Flash"
 DEFAULT_MODEL_CREDIT = 1
 
 MODELS = {"default": ["Gemini 2.0 Flash", 1, ["free", "basic", "pro", "enterprise"]],
-          "gemini-2.5-flash-preview-05-20": ["Gemini 2.5 Flash (Preview 05-20)", 3, ["basic", "pro", "enterprise"]],
+          "gemini-2.5-flash": ["Gemini 2.5 Flash", 3, ["basic", "pro", "enterprise"]],
+          "gemini-2.5-flash-lite-preview-06-17": ["Gemini 2.5 Flash-Lite (Preview 06-17)", 3, ["basic", "pro", "enterprise"]],
           "gemini-2.0-flash-lite": ["Gemini 2.0 Flash-Lite", 1, ["free", "basic", "pro", "enterprise"]],
           "gemini-2.0-flash-preview-image-generation": ["Gemini 2.0 Flash (Preview 画像生成)", 15, ["basic", "pro", "enterprise"]],
           "gemini-1.5-flash": ["Gemini 1.5 Flash", 3, ["free", "basic", "pro", "enterprise"]],
@@ -78,7 +79,7 @@ CHARACTERS = {
     "bocchi": ["後藤ひとり", "bocchi.txt"], "vegeta": ["ベジータ", "vegeta.txt"],
     "reimu": ["博麗霊夢", "reimu.txt"], "marisa": ["霧雨魔理沙", "marisa.txt"], 
     "yaju": ["野獣先輩", "yaju.txt"], "kurisu": ["牧瀬紅莉栖", "kurisu.txt"],
-    "satoshi": ["サトシ", "satoshi.txt"]
+    "satoshi": ["サトシ", "satoshi.txt"], "aris": ["天童アリス", "aris.txt"]
 }
 SYSTEM_PROMPTS = {}
 
@@ -226,7 +227,7 @@ def gemini(text, flag, attachment, chara, ai_model):
             prompt = SYSTEM_PROMPTS[chara]
 
         elif chara == "all":
-            prompt = "過去のUserとの対話記録を全て参照して、Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
+            prompt = "過去のUserとの対話記録を全て参照して、Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。[必ず日本語で応答すること]"
 
         else:
             prompt = "あなたは優秀なチャットボットです。Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。[必ず日本語で応答すること]"
@@ -248,12 +249,12 @@ def gemini(text, flag, attachment, chara, ai_model):
 
         chat = client.chats.create(model=use_model,
                                    config=types.GenerateContentConfig(
-                                       safety_settings=safety_settings,
-                                       temperature=0.9,
-                                       top_p=1,
-                                       top_k=5,
-                                       max_output_tokens=512,
-                                       system_instruction=prompt),
+                                   safety_settings=safety_settings,
+                                   temperature=0.9,
+                                   top_p=1,
+                                   top_k=5,
+                                   max_output_tokens=512,
+                                   system_instruction=prompt),
                                    history=attachment)
 
         # Geminiにメッセージを投げて返答を待つ。エラーはエラーとして返す。
@@ -352,10 +353,10 @@ def gemini(text, flag, attachment, chara, ai_model):
             prompt = SYSTEM_PROMPTS[chara]
 
         elif chara == "all":
-            prompt = "過去のUserとの対話記録を全て参照して、Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
+            prompt = "過去のUserとの対話記録を全て参照して、Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。[必ず日本語で応答すること]"
 
         else:
-            prompt = "あなたは優秀なチャットボットです。Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。lang:ja"
+            prompt = "あなたは優秀なチャットボットです。Userの発言に応答してください。チャットなので、返答はなるべく100字以内でお願いします。[必ず日本語で応答すること]"
 
         # AIモデル削除に対応した設定
         if ai_model in MODELS:
@@ -441,7 +442,8 @@ class SelectView(View):
             discord.SelectOption(label="霧雨魔理沙", value="marisa", description="東方Project [新システム]"),
             discord.SelectOption(label="野獣先輩", value="yaju", description="淫夢ファミリー [新システム]"),
             discord.SelectOption(label="牧瀬紅莉栖", value="kurisu", description="STEINS;GATE [新システム]"),
-            discord.SelectOption(label="サトシ", value="satoshi", description="ポケットモンスター [新システム]")
+            discord.SelectOption(label="サトシ", value="satoshi", description="ポケットモンスター [新システム]"),
+            discord.SelectOption(label="天童アリス", value="aris", description="ブルーアーカイブ")
         ],
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
@@ -508,7 +510,8 @@ class ModelSelectView(View):
         disabled=False,
         options=[
             discord.SelectOption(label="Gemini 2.0 Flash", value="default", description="通常の会話向け (デフォルト) [1クレジット]"),
-            discord.SelectOption(label="Gemini 2.5 Flash (Preview 04-17)", value="gemini-2.5-flash-preview-04-17", description="高性能、高レート制限 (Basic以上限定) [3クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Flash", value="gemini-2.5-flash", description="高性能、高レート制限 (Basic以上限定) [3クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Flash-Lite (Preview 06-17)", value="gemini-2.5-flash-lite-preview-06-17", description="高性能、やや軽量 (Basic以上限定) [3クレジット]"),
             discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 (Basic以上限定) [15クレジット]"),
             discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [1クレジット]"),
             discord.SelectOption(label="Gemini 1.5 Flash", value="gemini-1.5-flash", description="以前のバージョン [3クレジット]"),
