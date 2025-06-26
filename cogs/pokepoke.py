@@ -41,7 +41,7 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "A1": "[A1] 最強の遺伝子", "A1a": "[A1a] 幻のいる島", "A21": "[A2] 時空の激闘 ディアルガ", "A22": "[A2] 時空の激闘 パルキア",
                       "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
                       "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
-                      "A3a": "[A3a] 異次元クライシス",
+                      "A3a": "[A3a] 異次元クライシス", "A3b": "[A3b] イーブイガーデン",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
                       "A3ap": "PROMO-A Vol.9",
@@ -201,6 +201,7 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[A3b] イーブイガーデン", value="A3b"),
         discord.app_commands.Choice(name="[A3a] 異次元クライシス", value="A3a"),
         discord.app_commands.Choice(name="[A3] 双天の守護者 ソルガレオ", value="A31"),
         discord.app_commands.Choice(name="[A3] 双天の守護者 ルナアーラ", value="A32"),
