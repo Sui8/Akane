@@ -35,17 +35,17 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Gemini API Key
 ''' 初期処理 '''
 
 # Gemini
-DEFAULT_MODEL = "gemini-2.0-flash"
-DEFAULT_MODEL_NAME = "Gemini 2.0 Flash"
-DEFAULT_MODEL_CREDIT = 1
+DEFAULT_MODEL = "gemini-2.5-flash-lite-preview-06-17"
+DEFAULT_MODEL_NAME = "Gemini 2.5 Flash-Lite (Preview 06-17)"
+DEFAULT_MODEL_CREDIT = 1.5
 
-MODELS = {"default": ["Gemini 2.0 Flash", 1, ["free", "basic", "pro", "enterprise"]],
-          "gemini-2.5-flash": ["Gemini 2.5 Flash", 3, ["basic", "pro", "enterprise"]],
-          "gemini-2.5-flash-lite-preview-06-17": ["Gemini 2.5 Flash-Lite (Preview 06-17)", 3, ["basic", "pro", "enterprise"]],
-          "gemini-2.0-flash-lite": ["Gemini 2.0 Flash-Lite", 1, ["free", "basic", "pro", "enterprise"]],
+# レート制限は 1500回上限 = 1クレジット 基準にしている
+MODELS = {"default": ["Gemini 2.5 Flash-Lite (Preview 06-17)", 1.5, ["free", "basic", "pro", "enterprise"]],
+          "gemini-2.5-pro": ["Gemini 2.5 Pro", 15, ["pro", "enterprise"]],
+          "gemini-2.5-flash": ["Gemini 2.5 Flash", 6, ["basic", "pro", "enterprise"]],
+          "gemini-2.0-flash": ["Gemini 2.0 Flash", 7.5, ["basic", "pro", "enterprise"]],
           "gemini-2.0-flash-preview-image-generation": ["Gemini 2.0 Flash (Preview 画像生成)", 15, ["basic", "pro", "enterprise"]],
-          "gemini-1.5-flash": ["Gemini 1.5 Flash", 3, ["free", "basic", "pro", "enterprise"]],
-          "gemini-1.5-flash-8b": ["Gemini 1.5 Flash-8B", 3, ["free", "basic", "pro", "enterprise"]]}
+          "gemini-2.0-flash-lite": ["Gemini 2.0 Flash-Lite", 7.5, ["free", "basic", "pro", "enterprise"]]}
 
 IMAGE_MODELS = ["gemini-2.0-flash-preview-image-generation"]
 
@@ -509,13 +509,12 @@ class ModelSelectView(View):
         placeholder="AIモデルを選択",
         disabled=False,
         options=[
-            discord.SelectOption(label="Gemini 2.0 Flash", value="default", description="通常の会話向け (デフォルト) [1クレジット]"),
-            discord.SelectOption(label="Gemini 2.5 Flash", value="gemini-2.5-flash", description="高性能、高レート制限 (Basic以上限定) [3クレジット]"),
-            discord.SelectOption(label="Gemini 2.5 Flash-Lite (Preview 06-17)", value="gemini-2.5-flash-lite-preview-06-17", description="高性能、やや軽量 (Basic以上限定) [3クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Flash-Lite (Preview 06-17)", value="default", description="高性能、やや軽量 [1.5クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Pro", value="gemini-2.5-pro", description="推論、数学、コーディング向け (Basic以上限定) [15クレジット]"),
+            discord.SelectOption(label="Gemini 2.5 Flash", value="gemini-2.5-flash", description="高性能かつスピーディー (Basic以上限定) [6クレジット]"),
+            discord.SelectOption(label="Gemini 2.0 Flash", value="gemini-2.0-flash", description="通常の会話向け (Basic以上限定) [7.5クレジット]"),
             discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 (Basic以上限定) [15クレジット]"),
-            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [1クレジット]"),
-            discord.SelectOption(label="Gemini 1.5 Flash", value="gemini-1.5-flash", description="以前のバージョン [3クレジット]"),
-            discord.SelectOption(label="Gemini 1.5 Flash-8B", value="gemini-1.5-flash-8b", description="低知能タスク向け [3クレジット]")
+            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [7.5クレジット]")
         ],
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
