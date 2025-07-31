@@ -126,7 +126,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
             possibility = random.random()
 
             # オプションで指定されていたらそのまま、そうでなければ抽選
-            if pack_type != "random":
+            if type_select != "random":
                 pack_type = type_select
             
             else:
