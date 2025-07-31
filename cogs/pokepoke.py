@@ -124,28 +124,30 @@ async def pick_cards(self, pack_id, pcs, type_select):
             ## Step 1: パックの種類を決める
             # +1枚パックが存在するか (A4)
             possibility = random.random()
-            
-            if pack_id in ["A41", "A42"]:
-                if possibility < 0.0005:
-                    pack_type = "god"
 
-                elif possibility < 0.0005 + 0.08330:
-                    pack_type = "baby"
-
-                else:
-                    pack_type = "normal"
-
-            # パック種類分岐
-            else:
-                if possibility < 0.0005:
-                    pack_type = "god"
-
-                else:
-                    pack_type = "normal"
-
-            # オプションで指定されていたらtype上書きする
+            # オプションで指定されていたらそのまま、そうでなければ抽選
             if pack_type != "random":
                 pack_type = type_select
+            
+            else:
+                if pack_id in ["A41", "A42"]:
+                    if possibility < 0.0005:
+                        pack_type = "god"
+
+                    elif possibility < 0.0005 + 0.08330:
+                        pack_type = "baby"
+
+                    else:
+                        pack_type = "normal"
+
+                # パック種類分岐
+                else:
+                    if possibility < 0.0005:
+                        pack_type = "god"
+
+                    else:
+                        pack_type = "normal"
+
 
             ## Step 2: 種類に応じた設定
             # 引く枚数 +1枚処理 (A4)

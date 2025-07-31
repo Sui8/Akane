@@ -35,12 +35,12 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Gemini API Key
 ''' 初期処理 '''
 
 # Gemini
-DEFAULT_MODEL = "gemini-2.5-flash-lite-preview-06-17"
-DEFAULT_MODEL_NAME = "Gemini 2.5 Flash-Lite (Preview 06-17)"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL_NAME = "Gemini 2.5 Flash-Lite"
 DEFAULT_MODEL_CREDIT = 1.5
 
 # レート制限は 1500回上限 = 1クレジット 基準にしている
-MODELS = {"default": ["Gemini 2.5 Flash-Lite (Preview 06-17)", 1.5, ["free", "basic", "pro", "enterprise"]],
+MODELS = {"default": ["Gemini 2.5 Flash-Lite", 1.5, ["free", "basic", "pro", "enterprise"]],
           "gemini-2.5-pro": ["Gemini 2.5 Pro", 15, ["pro", "enterprise"]],
           "gemini-2.5-flash": ["Gemini 2.5 Flash", 6, ["basic", "pro", "enterprise"]],
           "gemini-2.0-flash": ["Gemini 2.0 Flash", 7.5, ["basic", "pro", "enterprise"]],
