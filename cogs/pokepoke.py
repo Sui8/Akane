@@ -18,8 +18,9 @@ from modules.decorators import ephemeral_check, restrict_check
 
 ##################################################
 
+# 31, 51 = ベイビィポケモン
 rarity_mapping = {"0": "PROMO", "10": "PROMO", "30": "PROMO", "40": "PROMO", "50": "PROMO", "1": "◇1", "2": "◇2",
-                                "3": "◇3", "4": "◇4", "5": "☆1", "6": "☆2",
+                                "3": "◇3", "31": "◇3", "4": "◇4", "5": "☆1", "51": "☆1", "6": "☆2",
                                 "7": "☆3", "70": "☆3",
                                 "8": "👑", "81": "👑", "82": "👑", "83": "👑",
                                 "11": "＊1", "12": "＊2"}
@@ -42,64 +43,58 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
                       "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
                       "A3a": "[A3a] 異次元クライシス", "A3b": "[A3b] イーブイガーデン",
+                      "A41": "[A4] 空と海の導き ホウオウ", "A42": "[A4] 空と海の導き ルギア",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
                       "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
-major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32"]
+major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32", "A41", "A42"]
 promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "A3ap", "A3bp", "ATS", "APS", "ACP", "AMS", "AGC"]
 
 ##################################################
 
 # パック開封関数
-async def pick_cards(self, pack_id, pcs):
-    # ゴッドパック
-    if random.random() < 0.0005:
-        god_pack = True
-
-    else:
-        god_pack = False
+async def pick_cards(self, pack_id, pcs, type_select):
+    
 
     # パック種類の確認
+    # 共通で出現するカードも探す
     if pack_id in ["A11", "A12", "A13"]:
-        where = f"pack_id IN ('A1', '{pack_id}')"
+        pack_ids = ["A1", pack_id]
 
     elif pack_id in ["A21", "A22"]:
-        where = f"pack_id IN ('A2', '{pack_id}')"
+        pack_ids = ["A2", pack_id]
 
     elif pack_id in ["A31", "A32"]:
-        where = f"pack_id IN ('A3', '{pack_id}')"
+        pack_ids = ["A3", pack_id]
+
+    elif pack_id in ["A41", "A42"]:
+        pack_ids = ["A4", pack_id]
 
     else:
-        where = f"pack_id = '{pack_id}'"
+        pack_ids = [pack_id]
 
     async with self.dbm.pool.acquire() as conn:
-        if god_pack:
-            # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
-            pack_info = await conn.fetchrow(f"""
-                SELECT pack_name, god_rate, pcs
-                FROM packs
-                WHERE {where}
-            """)
-
-        else:
-            # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
-            pack_info = await conn.fetchrow(f"""
-                SELECT pack_name, pull_rate, pcs
-                FROM packs
-                WHERE {where}
-            """)
+        # 1回のDB読み込みで pack_name, pull_rates, pcs, カードリストを取得
+        pack_info = await conn.fetchrow("""
+            SELECT pack_name, pull_rates, pcs
+            FROM packs
+            WHERE pack_id = ANY($1)
+        """, pack_ids)
 
         pack_name = pack_info["pack_name"]
-        pull_rate = json.loads(pack_info["pull_rate"])  # JSONをPythonの辞書に変換
         card_pcs = pack_info["pcs"]
 
-        # すべての pack_id に対応するカード情報を一度に取得
+        # pull_rateをパース (DB側をjsob型にすべきかも)
+        pull_rates_dict = json.loads(pack_info["pull_rates"])
+
+
+        # すべてのpack_idに対応するカード情報を一度に取得
         all_cards = await conn.fetch("""
             SELECT card_name, rarity
             FROM cards
-            WHERE pack = $1
-        """, pack_id)
+            WHERE pack = ANY($1)
+        """, pack_ids)
 
         # レアリティごとにカードを分類（辞書に格納）
         rarity_to_cards = {}
@@ -114,7 +109,7 @@ async def pick_cards(self, pack_id, pcs):
             if rarity not in rarity_to_cards:
                 rarity_to_cards[rarity] = []
 
-            # クラウン
+            # クラウン (ゴッドパック用に81~89も別でデータを追加する)
             if 81 <= rarity <= 89:
                 rarity_to_cards[8].append(card_name)
 
@@ -122,47 +117,77 @@ async def pick_cards(self, pack_id, pcs):
 
         # カード取得開始
         selected_cards = []
+        common_count = 0
+        g_common_count = 0
 
-        if pcs == "10":
-            common_count = 0
-
-            for j in range(10):
-                for i in range(1, card_pcs + 1):
-                    rarity_prob = pull_rate.get(str(i))  # i枚目のレアリティ確率を取得
-
-                    # レアリティを確率に基づいて選択
-                    rarities = list(rarity_prob.keys())
-                    probabilities = list(rarity_prob.values())
-                    selected_rarity = int(random.choices(rarities, probabilities)[0])
-
-                    if selected_rarity in [10, 1, 2]:
-                        common_count += 1
-                        
-                    else:
-                        # Python側でレアリティごとのカードリストから選択
-                        selected_card = random.choice(rarity_to_cards[selected_rarity])
-                        f_rarity = rarity_mapping.get(str(selected_rarity), "不明")
-                        selected_cards.append(f"・{selected_card} ({f_rarity})")
+        for j in range(int(pcs)):
+            ## Step 1: パックの種類を決める
+            # +1枚パックが存在するか (A4)
+            possibility = random.random()
             
-            if common_count != 0:
-                selected_cards.append(f"・ノーマルカード ×{common_count}")
+            if pack_id in ["A41", "A42"]:
+                if possibility < 0.0005:
+                    pack_type = "god"
 
-        else:
+                elif possibility < 0.0005 + 0.08330:
+                    pack_type = "baby"
+
+                else:
+                    pack_type = "normal"
+
+            # パック種類分岐
+            else:
+                if possibility < 0.0005:
+                    pack_type = "god"
+
+                else:
+                    pack_type = "normal"
+
+            # オプションで指定されていたらtype上書きする
+            if pack_type != "random":
+                pack_type = type_select
+
+            ## Step 2: 種類に応じた設定
+            # 引く枚数 +1枚処理 (A4)
+            if pack_type == "baby":
+                card_pcs += 1
+
+            # pull_rate決定
+            pull_rate = pull_rates_dict[pack_type]
+
+
+            ## Step 3: カードを引く
+            # カードをn枚取得
             for i in range(1, card_pcs + 1):
-                rarity_prob = pull_rate.get(str(i))  # i枚目のレアリティ確率を取得
+                # i枚目のレアリティ確率を取得
+                rarity_prob = pull_rate.get(str(i))
 
                 # レアリティを確率に基づいて選択
                 rarities = list(rarity_prob.keys())
                 probabilities = list(rarity_prob.values())
                 selected_rarity = int(random.choices(rarities, probabilities)[0])
 
-                if selected_rarity == 8:
-                    selected_rarity = 80 + random.randint(1, 3)
+                # ノーマルカードは枚数だけにする (10連のみ)
+                if selected_rarity in [10, 1, 2] and pcs == "10":
+                    common_count += 1
 
-                # Python側でレアリティごとのカードリストから選択
-                selected_card = random.choice(rarity_to_cards[selected_rarity])
-                f_rarity = rarity_mapping.get(str(selected_rarity), "不明")
-                selected_cards.append(f"・{selected_card} ({f_rarity})")
+                # ☆1, ＊1は枚数のみにする (ゴッドパックで10連のみ)
+                elif selected_rarity in [5, 11] and pcs == "10" and type_select == "god":
+                    g_common_count += 1
+                    
+                else:
+                    # レアリティごとのカードリストから選択
+                    selected_card = random.choice(rarity_to_cards[selected_rarity])
+                    f_rarity = rarity_mapping.get(str(selected_rarity), "不明")
+                    selected_cards.append(f"・{selected_card} ({f_rarity})")
+
+        # ノーマルカードは枚数にする (10連のみ)
+        if common_count != 0 and pcs == "10":
+            selected_cards.append(f"・◇1, ◇2カード ×{common_count}")
+
+        # ☆1, ＊1は枚数のみにする (ゴッドパックで10連のみ)
+        if g_common_count != 0 and pcs == "10" and type_select == "god":
+            selected_cards.append(f"・☆1または＊1カード ×{g_common_count}")
 
         return [pack_name, selected_cards]
 
@@ -201,6 +226,8 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[A4] 空と海の導き ホウオウ", value="A41"),
+        discord.app_commands.Choice(name="[A4] 空と海の導き ルギア", value="A42"),
         discord.app_commands.Choice(name="[A3b] イーブイガーデン", value="A3b"),
         discord.app_commands.Choice(name="[A3a] 異次元クライシス", value="A3a"),
         discord.app_commands.Choice(name="[A3] 双天の守護者 ソルガレオ", value="A31"),
@@ -227,9 +254,13 @@ class PokePoke(commands.Cog):
     @app_commands.choices(pcs=[
         discord.app_commands.Choice(name="1パック", value="1"),
         discord.app_commands.Choice(name="10パック", value="10")])
+    @app_commands.describe(option="抽選オプション")
+    @app_commands.choices(option=[
+        discord.app_commands.Choice(name="通常封入", value="normal"),
+        discord.app_commands.Choice(name="レア封入", value="god")])
     @ephemeral_check
     @restrict_check
-    async def open(self, ctx: discord.Interaction, pack: str, pcs: str = None):
+    async def open(self, ctx: discord.Interaction, pack: str, pcs: str = "1", option: str = "random"):
         try:
             ephemeral = ctx.extras.get('ephemeral', False)
             await ctx.response.defer()
@@ -238,7 +269,7 @@ class PokePoke(commands.Cog):
                 await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
                 return
 
-            pack_name, selected_cards = await pick_cards(self, pack, pcs)
+            pack_name, selected_cards = await pick_cards(self, pack, pcs, option)
 
             # タイトルをパック数に応じて変更する
             if pcs == "10":
@@ -264,7 +295,7 @@ class PokePoke(commands.Cog):
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     return
 
-                pack_name, selected_cards = await pick_cards(self, pack, pcs)
+                pack_name, selected_cards = await pick_cards(self, pack, pcs, option)
 
                 embed = discord.Embed(
                     title=f"@{interaction.user.name} の開封結果",
