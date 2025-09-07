@@ -44,12 +44,13 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
                       "A3a": "[A3a] 異次元クライシス", "A3b": "[A3b] イーブイガーデン",
                       "A41": "[A4] 空と海の導き ホウオウ", "A42": "[A4] 空と海の導き ルギア", "A4": "[A4] 空と海の導き",
+                      "A4a": "[A4a] 未知なる水域",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
-                      "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10", "A4p": "PROMO-A Vol.11",
+                      "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10", "A4p": "PROMO-A Vol.11", "A4ap": "PROMO-A Vol.12",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
 major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32", "A41", "A42"]
-promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "A3ap", "A3bp", "A4p", "ATS", "APS", "ACP", "AMS", "AGC"]
+promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "A3ap", "A3bp", "A4p", "A4ap", "ATS", "APS", "ACP", "AMS", "AGC"]
 
 ##################################################
 
@@ -231,6 +232,7 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[A4a] 未知なる水域", value="A4a"),
         discord.app_commands.Choice(name="[A4] 空と海の導き ホウオウ", value="A41"),
         discord.app_commands.Choice(name="[A4] 空と海の導き ルギア", value="A42"),
         discord.app_commands.Choice(name="[A3b] イーブイガーデン", value="A3b"),
@@ -245,6 +247,7 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 リザードン", value="A11"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ミュウツー", value="A12"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ピカチュウ", value="A13"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.12", value="A4ap"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.11", value="A4p"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.10", value="A3bp"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.9", value="A3ap"),
