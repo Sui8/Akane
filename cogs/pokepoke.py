@@ -247,18 +247,7 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 リザードン", value="A11"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ミュウツー", value="A12"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ピカチュウ", value="A13"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.12", value="A4ap"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.11", value="A4p"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.10", value="A3bp"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.9", value="A3ap"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.8", value="A3p2"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.7", value="A3p"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.6", value="A2bp"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.5", value="A2ap"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.4", value="A2p"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.3", value="A1ap"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.2", value="A1p2"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.1", value="A1p")])
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.12", value="A4ap")])
     @app_commands.describe(pcs="開封数")
     @app_commands.choices(pcs=[
         discord.app_commands.Choice(name="1パック", value="1"),
@@ -359,6 +348,21 @@ class PokePoke(commands.Cog):
         except Exception as e:
             import traceback
             print(traceback.format_exc())
+
+    '''
+    行数制限のため、一時的に削除
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.11", value="A4p"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.10", value="A3bp"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.9", value="A3ap"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.8", value="A3p2"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.7", value="A3p"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.6", value="A2bp"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.5", value="A2ap"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.4", value="A2p"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.3", value="A1ap"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.2", value="A1p2"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.1", value="A1p")
+    '''
 
 
     # info
