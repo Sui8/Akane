@@ -176,7 +176,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
                 selected_rarity = int(random.choices(rarities, probabilities)[0])
 
                 # ノーマルカードは枚数だけにする (10連のみ)
-                if selected_rarity in [10, 1, 2] and pcs == "10":
+                if selected_rarity in [10, 1, 2, 19, 29] and pcs == "10":
                     common_count += 1
 
                 # ☆1, ＊1は枚数のみにする (ゴッドパックで10連のみ)
