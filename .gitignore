@@ -4,3 +4,4 @@ __pycache__/
 run.sh
 .others/
 data/
+postgres_card_input.py
