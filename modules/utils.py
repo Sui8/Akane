@@ -21,7 +21,7 @@ async def send_error(ctx: discord.Interaction, error_code: str = None, custom_te
 
     else:
         view = None
-    
+
     embed = discord.Embed(
         title=":x: エラー",
         description=text,

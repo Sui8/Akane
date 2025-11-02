@@ -1,16 +1,12 @@
 # 組み込みライブラリ
 import asyncio
-import datetime
 import os
-from itertools import cycle
-import random
 
 # 外部ライブラリ
 import discord
 from discord.ext import commands  # Bot Commands Framework
-from discord.ext import tasks
 from dotenv import load_dotenv  # python-dotenv
-import simplejson as json  # simplejson
+# import simplejson as json  # simplejson
 
 
 load_dotenv()  # .env読み込み
@@ -115,6 +111,8 @@ async def give_money(ctx, userid: int, val: int):
 ##################################################
 
 # 起動
+
+
 async def main():
     async with bot:
         await bot.start(TOKEN)

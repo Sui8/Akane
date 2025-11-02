@@ -1,5 +1,4 @@
 # 組み込みライブラリ
-import random
 import urllib.parse
 
 # 外部ライブラリ
@@ -26,7 +25,7 @@ class Nijigen(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:

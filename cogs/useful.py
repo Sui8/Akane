@@ -10,7 +10,7 @@ import qrcode  # qrcode
 
 # 自作モジュール
 from modules.utils import send_error
-from modules.decorators import ephemeral_check, restrict_check
+from modules.decorators import restrict_check
 
 
 ##################################################
@@ -61,18 +61,19 @@ class QRCode(discord.ui.Modal, title='QRコード作成'):
 
 ##################################################
 
+
 ''' コマンド '''
 
 
 class Useful(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
-
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -130,11 +131,11 @@ class Useful(commands.Cog):
             "bolditalic": (0x1D482, 0x1D468),  # 太字+斜体
             "sansbold": (0x1D5BA, 0x1D5A0),  # Sans Serif 太字
             "sansitalic": (0x1D608, 0x1D622),  # Sans Serif 斜体
-            "sansbolditalic": (0x1D656, 0x1D63C), # Sans Serif 太字+斜体
-            "cursive": (0x1D4B6, 0x1D49C), # Cursive Script
-            "cursivebold": (0x1D4EA, 0x1D4D0), # Cursive Script 太字
-            "fraktur": (0x1D51E, 0x1D504), # Fraktur
-            "frakturbold": (0x1D586, 0x1D56C) # Fraktur 太字
+            "sansbolditalic": (0x1D656, 0x1D63C),  # Sans Serif 太字+斜体
+            "cursive": (0x1D4B6, 0x1D49C),  # Cursive Script
+            "cursivebold": (0x1D4EA, 0x1D4D0),  # Cursive Script 太字
+            "fraktur": (0x1D51E, 0x1D504),  # Fraktur
+            "frakturbold": (0x1D586, 0x1D56C)  # Fraktur 太字
         }
 
         start, end = unicode_styles[txt_type]
@@ -174,7 +175,7 @@ class Useful(commands.Cog):
         except Exception:
             await send_error(ctx, None, "URLの形式が正しいか確認してください", None, is_followup=True)
             await self.dbm.log_command(ctx.user.id, "button", [name, url, message], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
-        
+
         else:
             await ctx.followup.send(message, view=view, ephemeral=False)
             await self.dbm.log_command(ctx.user.id, "button", [name, url, message], ctx.guild.id if ctx.guild else None, result="Success")
@@ -193,7 +194,12 @@ class Useful(commands.Cog):
         discord.app_commands.Choice(name="英数字と記号", value="alphabet_s"),
         discord.app_commands.Choice(name="16進数", value="hex")])
     @restrict_check
-    async def password(self, ctx: discord.Interaction, txt_type: str, long: app_commands.Range[int, 1, 64], pcs: app_commands.Range[int, 1, 30] = None):
+    async def password(
+            self,
+            ctx: discord.Interaction,
+            txt_type: str,
+            long: app_commands.Range[int, 1, 64],
+            pcs: app_commands.Range[int, 1, 30] = None):
         await ctx.response.defer(ephemeral=True)
 
         if ctx.extras.get('restricted', False):
@@ -219,7 +225,7 @@ class Useful(commands.Cog):
             if pcs > 1:
                 for i in range(pcs):
                     passwords += f'{"".join(random.choices(char_set, k=long))}\n'
-            
+
             else:
                 passwords = "".join(random.choices(char_set, k=long))
 
@@ -228,7 +234,6 @@ class Useful(commands.Cog):
 
         await ctx.followup.send(passwords, ephemeral=True)
         await self.dbm.log_command(ctx.user.id, "password", [txt_type, long, pcs], ctx.guild.id if ctx.guild else None, result="Success")
-
 
     #########################
 

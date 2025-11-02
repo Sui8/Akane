@@ -23,7 +23,7 @@ class Delete(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -71,8 +71,8 @@ class Delete(commands.Cog):
 
         else:
             embed = discord.Embed(title=":white_check_mark: 成功",
-                                    description=f"`{len(deleted)}`件のメッセージを削除しました",
-                                    color=discord.Colour.green())
+                                  description=f"`{len(deleted)}`件のメッセージを削除しました",
+                                  color=discord.Colour.green())
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "delete", num, ctx.guild.id if ctx.guild else None, result="Success")
 

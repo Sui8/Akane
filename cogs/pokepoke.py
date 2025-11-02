@@ -1,9 +1,6 @@
 # 組み込みライブラリ
-from datetime import datetime, timedelta, timezone
 import random
 import ast
-import asyncio
-import asyncpg
 
 # 外部ライブラリ
 import discord
@@ -63,9 +60,9 @@ promo_b_packs = ["BTS", "BPS", "BCP", "BMS", "BGC"]
 
 ##################################################
 
+
 # パック開封関数
 async def pick_cards(self, pack_id, pcs, type_select):
-    
 
     # パック種類の確認
     # 共通で出現するカードも探す
@@ -101,7 +98,6 @@ async def pick_cards(self, pack_id, pcs, type_select):
         # pull_rateをパース (DB側をjsob型にすべきかも)
         pull_rates_dict = json.loads(pack_info["pull_rates"])
 
-
         # すべてのpack_idに対応するカード情報を一度に取得
         all_cards = await conn.fetch("""
             SELECT card_name, rarity
@@ -134,14 +130,14 @@ async def pick_cards(self, pack_id, pcs, type_select):
         g_common_count = 0
 
         for j in range(int(pcs)):
-            ## Step 1: パックの種類を決める
+            # - Step 1: パックの種類を決める -
             # +1枚パックが存在するか (A4)
             possibility = random.random()
 
             # オプションで指定されていたらそのまま、そうでなければ抽選
             if type_select != "random":
                 pack_type = type_select
-            
+
             else:
                 if pack_id in ["A41", "A42"]:
                     if possibility < 0.050:
@@ -171,8 +167,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
                     else:
                         pack_type = "normal"
 
-
-            ## Step 2: 種類に応じた設定
+            # - Step 2: 種類に応じた設定 -
             # 引く枚数 +1枚処理
             if pack_type == "plus":
                 card_pcs_final = card_pcs + 1
@@ -183,8 +178,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
             # pull_rate決定
             pull_rate = pull_rates_dict[pack_type]
 
-
-            ## Step 3: カードを引く
+            # - Step 3: カードを引く -
             # カードをn枚取得
             for i in range(1, card_pcs_final + 1):
                 # i枚目のレアリティ確率を取得
@@ -202,7 +196,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
                 # ☆1, ＊1は枚数のみにする (ゴッドパックで10連のみ)
                 elif selected_rarity in [5, 11] and pcs == "10" and type_select == "god":
                     g_common_count += 1
-                    
+
                 else:
                     # レアリティごとのカードリストから選択
                     selected_card = random.choice(rarity_to_cards[selected_rarity])
@@ -223,15 +217,15 @@ async def pick_cards(self, pack_id, pcs, type_select):
 
 ''' コマンド '''
 
+
 class PokePoke(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     # Cog読み込み時
-
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -349,7 +343,6 @@ class PokePoke(commands.Cog):
 
                 await interaction.response.send_message(embed=embed, view=view, ephemeral=ephemeral)
 
-
             # ボタンにコールバックを設定
             button = discord.ui.Button(label="もう一度開封", style=discord.ButtonStyle.primary)
             button.callback = button_callback
@@ -371,7 +364,7 @@ class PokePoke(commands.Cog):
             await ctx.followup.send(embed=embed, view=view, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "poke open", [pack, pcs], ctx.guild.id if ctx.guild else None, result="Success")
 
-        except Exception as e:
+        except Exception:
             import traceback
             print(traceback.format_exc())
 
@@ -390,7 +383,6 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.2", value="A1p2"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.1", value="A1p")
     '''
-
 
     # info
     @group.command(name="info", description="ポケポケのカード情報を表示する (最大25件まで検索可能)")
@@ -416,14 +408,15 @@ class PokePoke(commands.Cog):
         async with self.dbm.pool.acquire() as conn:
             # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
             # ついでにidが存在するデータも取りに行く
-            result = await conn.fetch(f"""
-                SELECT 
-                    c.card_name, c.card_id, c.rarity, c.hp, c.type, c.cardtype, 
-                    c.evolution_from, c.description, 
+            result = await conn.fetch(
+                """
+                SELECT
+                    c.card_name, c.card_id, c.rarity, c.hp, c.type, c.cardtype,
+                    c.evolution_from, c.description,
                     COALESCE(cs.description, c.spec_id::TEXT) AS spec_desc,
                     COALESCE(sk.description, NULL) AS skill_desc,
                     COALESCE(sk.skill_name, NULL) AS skill_name,
-                    
+
                     ARRAY_AGG(COALESCE(ca.ability_name, 'None')) AS ability_name,
                     ARRAY_AGG(COALESCE(ca.description, 'None')) AS ability_desc,
                     ARRAY_AGG(COALESCE(ca.damage::TEXT, 'None')) AS ability_damage,
@@ -455,19 +448,21 @@ class PokePoke(commands.Cog):
                 OR c.card_name ILIKE $3
                 OR c.card_name ILIKE $4
 
-                GROUP BY 
-                    c.card_id, c.card_name, c.rarity, c.hp, c.type, c.cardtype, 
+                GROUP BY
+                    c.card_id, c.card_name, c.rarity, c.hp, c.type, c.cardtype,
                     c.evolution_from, c.description, cs.description, c.spec_id,
                     sk.description, sk.skill_name, c.away, c.effective, c.pack
 
                 ORDER BY similarity_score DESC, c.card_id
                 LIMIT 25
-            """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%", f"%{name}%")
+                """,
+                f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%", f"%{name}%"
+                )
 
         if not result:
             embed = discord.Embed(title=":x: 検索失敗",
-                                description="一致するカードが見つかりませんでした",
-                                color=0xff0000)
+                                  description="一致するカードが見つかりませんでした",
+                                  color=0xff0000)
             await ctx.followup.send(embed=embed, ephemeral=True)
             return
 
@@ -502,10 +497,10 @@ class PokePoke(commands.Cog):
                 label = f"{card['card_name']} ({f_rarity}) [{pack} {id}]"
                 labels[str(card['card_id'])] = label
                 options.append(discord.SelectOption(label=label, value=card['card_id']))
-            
+
             # ドロップダウンメニューとボタンを作成
             select = discord.ui.Select(placeholder="カードを選んでください", options=options)
-            
+
             # ドロップダウンが選ばれた時のコールバック
             async def select_callback(interaction):
                 if interaction.user != ctx.user:
@@ -581,7 +576,12 @@ class PokePoke(commands.Cog):
                                 else:
                                     damage_type = ""
 
-                                ability_information = f"**{energy} {selected_card['ability_name'][i]} {selected_card['ability_damage'][i] if selected_card['ability_damage'][i] != "None" else ''}{damage_type}**"
+                                ability_information = (
+                                    f"**{energy} "
+                                    f"{selected_card['ability_name'][i]} "
+                                    f"{selected_card['ability_damage'][i] if selected_card['ability_damage'][i] != "None" else ''}"
+                                    f"{damage_type}**"
+                                    )
 
                                 if selected_card['ability_desc'][i] != "None":
                                     ability_information += f"\n{selected_card['ability_desc'][i]}"
@@ -607,7 +607,7 @@ class PokePoke(commands.Cog):
                             information += f"【弱点】{flee}+20\n"
 
                         else:
-                            information += f"【弱点】\n"
+                            information += "【弱点】\n"
 
                         if selected_card['away'] >= 0:
                             information += f"【にげる】{'<:Colorless_Energy:1368064742668894238>' * int(selected_card['away'])}\n"
@@ -639,9 +639,9 @@ class PokePoke(commands.Cog):
                     embed.set_footer(text="画像引用元: deviantart.com/biochao")
 
                     await interaction.response.edit_message(embed=embed, view=view)
-                except:
-                    import traceback
-                    print(traceback.format_exc())
+
+                except Exception:
+                    pass
 
             select.callback = select_callback
             view = discord.ui.View(timeout=600)
@@ -656,7 +656,7 @@ class PokePoke(commands.Cog):
                 await ctx.edit_original_response(view=view)
 
             view.on_timeout = on_timeout
-            
+
             embed = discord.Embed(title=":mag: 検索結果",
                                   description=f"{len(options)}件見つかりました\nカードを選択してください",
                                   color=discord.Colour.green())

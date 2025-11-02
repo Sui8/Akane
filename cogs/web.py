@@ -71,14 +71,14 @@ class GosenChoen(discord.ui.Modal, title='「5000兆円欲しい！」ジェネ�
 
 
 class Web(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
-
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -113,13 +113,15 @@ class Web(commands.Cog):
 
         # short.io
         if host == "shortio":
-            res = requests.post('https://api.short.io/links', json={
-                'domain': 'x3.f5.si',
-                'originalURL': url,
-            }, headers = {
-                'authorization': SHORTIO_KEY,
-                'content-type': 'application/json'
-            }, )
+            res = requests.post('https://api.short.io/links',
+                                json={
+                                    'domain': 'x3.f5.si',
+                                    'originalURL': url,
+                                    },
+                                headers={
+                                    'authorization': SHORTIO_KEY,
+                                    'content-type': 'application/json'
+                                    },)
 
             res.raise_for_status()
 
@@ -211,7 +213,7 @@ class Web(commands.Cog):
             # ユーザ名からUUID変換
             url = f"https://api.mojang.com/users/profiles/minecraft/{user}"
             headers = {"content-type": "application/json"}
-            
+
             try:
                 response = requests.get(url, headers=headers)
 
@@ -235,8 +237,8 @@ class Web(commands.Cog):
                 user_data = response.json()
                 name = user_data["name"]
                 properties = user_data["properties"]
-                textures = list(filter(lambda x: x["name"]=="textures", properties))[0]["value"]
-                
+                textures = list(filter(lambda x: x["name"] == "textures", properties))[0]["value"]
+
                 # スキン画像のURL取得
                 textures = json.loads(base64.b64decode(textures))
                 skin_url = textures["textures"]["SKIN"]["url"]

@@ -1,8 +1,5 @@
 # 組み込みライブラリ
 import os
-import datetime
-from zoneinfo import ZoneInfo  # JST設定用
-import sqlite3
 
 # 外部ライブラリ
 import discord
@@ -35,11 +32,10 @@ class Shikanoko(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:

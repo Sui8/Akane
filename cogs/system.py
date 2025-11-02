@@ -2,7 +2,7 @@
 import os
 import datetime
 from zoneinfo import ZoneInfo  # JST設定用
-import platform # カーネル取得用
+import platform  # カーネル取得用
 
 # 外部ライブラリ
 import discord
@@ -39,7 +39,7 @@ class System(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -63,7 +63,7 @@ class System(commands.Cog):
     async def help(self, ctx: discord.Interaction, command: str = None):
         await ctx.response.defer()
 
-        ephemeral = ctx.extras.get('ephemeral', False)
+        # ephemeral = ctx.extras.get('ephemeral', False)
 
         if ctx.extras.get('restricted', False):
             await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
@@ -146,30 +146,35 @@ class System(commands.Cog):
         ephemeral = ctx.extras.get('ephemeral', False)
 
         async with self.dbm.pool.acquire() as conn:
-            COMMAND_COUNT = await conn.fetchval("""
+            COMMAND_COUNT = await conn.fetchval(
+                """
                 SELECT value
                 FROM bot_data
                 WHERE name = $1
-            """, "command_count")
+                """,
+                "command_count"
+                )
 
         embed = discord.Embed(title="ステータス",
-                            description="",
-                            color=0xc8ff00)
+                              description="",
+                              color=0xc8ff00)
         embed.add_field(name=":robot: 統計", value=f"サーバー数: **{len(self.bot.guilds):,}**\nユーザー数: **調整中**")
-        embed.add_field(name=":pencil: Botの情報", value=
-                        f"開発者: **{self.bot.OWNER_NAME}**\n"
-                        f"バージョン: **{self.bot.VERSION}**\n"
-                        f"コマンド数: **{int(COMMAND_COUNT):,}**")
-        embed.add_field(name=":desktop: サーバー情報", value=
-                        f"CPU使用率: **{psutil.cpu_percent(interval=1)}% "
-                        f"({round(psutil.cpu_freq().current / 1000, 2)}GHz)**\n"
-                        f"メモリ使用率: **{psutil.virtual_memory().percent}% "
-                        f"({round(psutil.virtual_memory().used / 1024 ** 3, 1)}/"
-                        f"{round(psutil.virtual_memory().total / 1024 ** 3, 1)}GB)**\n"
-                        f"起動日時: **{datetime.datetime.fromtimestamp(psutil.boot_time()).strftime('%Y/%m/%d %H:%M:%S')} (UTC+9)**\n"
-                        f"discord.py: **v{discord.__version__}**\n"
-                        f"OS: **{distro.name(pretty=True)}**\n"
-                        f"カーネル: **Linux {platform.release()}**")
+        embed.add_field(name=":pencil: Botの情報",
+                        value=(
+                            f"開発者: **{self.bot.OWNER_NAME}**\n"
+                            f"バージョン: **{self.bot.VERSION}**\n"
+                            f"コマンド数: **{int(COMMAND_COUNT):,}**"))
+        embed.add_field(name=":desktop: サーバー情報",
+                        value=(
+                            f"CPU使用率: **{psutil.cpu_percent(interval=1)}% "
+                            f"({round(psutil.cpu_freq().current / 1000, 2)}GHz)**\n"
+                            f"メモリ使用率: **{psutil.virtual_memory().percent}% "
+                            f"({round(psutil.virtual_memory().used / 1024 ** 3, 1)}/"
+                            f"{round(psutil.virtual_memory().total / 1024 ** 3, 1)}GB)**\n"
+                            f"起動日時: **{datetime.datetime.fromtimestamp(psutil.boot_time()).strftime('%Y/%m/%d %H:%M:%S')} (UTC+9)**\n"
+                            f"discord.py: **v{discord.__version__}**\n"
+                            f"OS: **{distro.name(pretty=True)}**\n"
+                            f"カーネル: **Linux {platform.release()}**"))
         embed.set_footer(text=f"データ取得時刻: {datetime.datetime.now(ZoneInfo('Asia/Tokyo')).strftime('%Y/%m/%d %H:%M:%S')}")
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "stats", None, ctx.guild.id if ctx.guild else None, result="Success")
@@ -213,7 +218,8 @@ class System(commands.Cog):
             return
 
         await ctx.followup.send("__**サポートサーバー**__\nお問い合わせ・バグ報告・アップデート情報はこちらで配信しています。\n"
-                                        f"以下のリンクより参加できます。\n{self.bot.SUPPORT_SERVER}", ephemeral=ephemeral)
+                                f"以下のリンクより参加できます。\n{self.bot.SUPPORT_SERVER}",
+                                ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "support", None, ctx.guild.id if ctx.guild else None, result="Success")
 
     #########################

@@ -1,19 +1,15 @@
 # 組み込みライブラリ
 import secrets
-import os
 from datetime import datetime, timedelta, timezone
 import re
-import time
 import random
 import string
-import sqlite3
-import asyncio
 
 # 外部ライブラリ
 import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
-import simplejson as json  # simplejson
+# import simplejson as json  # simplejson
 
 # 自作モジュール
 from modules.utils import send_error
@@ -22,23 +18,24 @@ from modules.decorators import ephemeral_check, restrict_check
 
 ##################################################
 
-SEND_TAX = 0.10 # 送金手数料
+SEND_TAX = 0.10  # 送金手数料
 grade_mapping = {"0": "New Worker", "1": "Worker", "2": "Expert", "3": "Expert+",
                  "4": "Trusted", "5": "Trusted✅", "6": "Moderator"}
 
 ##################################################
 
+
 def get_level_from_experience(total_experience):
     """
     総獲得経験値に基づいてレベルを計算する関数
-    経験値は指数的に増加する。
+    ※経験値は指数的に増加
     """
     base_xp = 100  # レベル1→2に必要な経験値
     growth_factor = 1.2  # 経験値増加の指数係数
-    
+
     level = 1  # レベル1からスタート
     required_xp = base_xp
-    
+
     # 経験値がレベルアップに達するまで繰り返し
     while total_experience >= required_xp:
         total_experience -= required_xp
@@ -48,7 +45,7 @@ def get_level_from_experience(total_experience):
     # レベル上限
     if level > 500:
         level = 500
-    
+
     return level
 
 
@@ -78,7 +75,9 @@ def get_next_level_experience(total_experience):
 
 ##################################################
 
+
 ''' コマンド '''
+
 
 class Money(commands.Cog):
     def __init__(self, bot):
@@ -88,7 +87,7 @@ class Money(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -125,7 +124,7 @@ class Money(commands.Cog):
                 WHERE user_id = $1
             """, ctx.user.id)
 
-        now = datetime.now(timezone.utc) # 現在時刻(UTC)
+        now = datetime.now(timezone.utc)  # 現在時刻(UTC)
 
         # UTC+9
         jst = timezone(timedelta(hours=9))
@@ -161,7 +160,7 @@ class Money(commands.Cog):
                     # 試験中 レベルブースト
                     bonus += int(bonus * (level - 1) * 0.05)
                     exp_bonus += int(exp_bonus * (level - 1) * 0.1)
-    
+
                 # 新しいレベルを計算
                 new_level = get_level_from_experience(exp + exp_bonus)
 
@@ -184,11 +183,22 @@ class Money(commands.Cog):
                 async with self.dbm.pool.acquire() as conn:
                     async with conn.transaction():
                         try:
-                            await conn.execute('''
-                            UPDATE wallet_data
-                            SET balance = $1, badges = $2, exp = $3, last_login = $4, total_login = $5, username = $6, level = $7, trust_rank = $8
-                            WHERE user_id = $9
-                            ''', balance + bonus, "", exp + exp_bonus, now.replace(tzinfo=None), new_total_login, ctx.user.name, new_level, new_grade, ctx.user.id)
+                            await conn.execute(
+                                '''
+                                UPDATE wallet_data
+                                SET
+                                    balance = $1, badges = $2,
+                                    exp = $3, last_login = $4,
+                                    total_login = $5, username = $6,
+                                    level = $7, trust_rank = $8
+                                WHERE user_id = $9
+                                ''',
+                                balance + bonus, "",
+                                exp + exp_bonus, now.replace(tzinfo=None),
+                                new_total_login, ctx.user.name,
+                                new_level, new_grade,
+                                ctx.user.id
+                                )
 
                         except Exception as e:
                             await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
@@ -209,16 +219,16 @@ class Money(commands.Cog):
                     description += f"\n:up: グレードアップ！({grade_text}→**{new_grade_text}**)"
 
                 embed = discord.Embed(title=f"@{ctx.user.name} のウォレット",
-                                    description=description,
-                                    color=discord.Colour.green())
+                                      description=description,
+                                      color=discord.Colour.green())
                 embed.set_footer(text=f"最終ログイン: {formatted_now_jst}")
                 await ctx.followup.send(embed=embed, ephemeral=ephemeral)
                 await self.dbm.log_command(ctx.user.id, "wallet", None, ctx.guild.id if ctx.guild else None, result="Success")
 
             else:
                 embed = discord.Embed(title=f"@{ctx.user.name} のウォレット",
-                                    description=f"**所持金**: {balance:,} ZNY",
-                                    color=discord.Colour.green())
+                                      description=f"**所持金**: {balance:,} ZNY",
+                                      color=discord.Colour.green())
                 embed.set_footer(text=f"最終ログイン: {last_login_dt.strftime('%Y/%m/%d %H:%M:%S')}")
                 await ctx.followup.send(embed=embed, ephemeral=ephemeral)
                 await self.dbm.log_command(ctx.user.id, "wallet", None, ctx.guild.id if ctx.guild else None, result="Success")
@@ -231,10 +241,20 @@ class Money(commands.Cog):
             async with self.dbm.pool.acquire() as conn:
                 async with conn.transaction():
                     try:
-                        await conn.execute('''
-                                INSERT INTO wallet_data (user_id, username, balance, badges, exp, level, total_login, last_login, last_work, trust_rank)
-                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                            ''', ctx.user.id, ctx.user.name, 1000, "", 0, 1, 1, now.replace(tzinfo=None), last_str.replace(tzinfo=None), 0)
+                        await conn.execute(
+                            '''
+                            INSERT INTO wallet_data (
+                                user_id, username, balance,
+                                badges, exp, level,
+                                total_login, last_login, last_work,
+                                trust_rank)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                            ''',
+                            ctx.user.id, ctx.user.name, 1000,
+                            "", 0, 1,
+                            1, now.replace(tzinfo=None), last_str.replace(tzinfo=None),
+                            0
+                            )
 
                     except Exception as e:
                         await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
@@ -242,8 +262,8 @@ class Money(commands.Cog):
                         return
 
             embed = discord.Embed(title=f"@{ctx.user.name} のウォレット",
-                                description="**所持金**: 1,000 ZNY\n\n:white_check_mark: 初回ログイン **+1,000 ZNY**",
-                                color=discord.Colour.green())
+                                  description="**所持金**: 1,000 ZNY\n\n:white_check_mark: 初回ログイン **+1,000 ZNY**",
+                                  color=discord.Colour.green())
             embed.set_footer(text=f"最終ログイン: {formatted_now_jst}")
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "wallet", None, ctx.guild.id if ctx.guild else None, result="Success")
@@ -271,8 +291,8 @@ class Money(commands.Cog):
 
         except Exception:
             embed = discord.Embed(title=":x: エラー",
-                                description="ユーザーが見つかりませんでした",
-                                color=0xff0000)
+                                  description="ユーザーが見つかりませんでした",
+                                  color=0xff0000)
             await ctx.followup.send(embed=embed, ephemeral=True)
 
         else:
@@ -283,10 +303,10 @@ class Money(commands.Cog):
 
             # DBから自分とターゲットユーザーの情報を取得
             async with self.dbm.pool.acquire() as conn:
-                sender_data = await conn.fetchval('SELECT balance FROM wallet_data WHERE user_id = $1',
-                                                ctx.user.id)
-                target_data = await conn.fetchval('SELECT balance FROM wallet_data WHERE user_id = $1',
-                                                target)
+                sender_data = await conn.fetchval("SELECT balance FROM wallet_data WHERE user_id = $1",
+                                                  ctx.user.id)
+                target_data = await conn.fetchval("SELECT balance FROM wallet_data WHERE user_id = $1",
+                                                  target)
 
             # 送金元ウォレットの存在確認
             if not sender_data:
@@ -309,11 +329,10 @@ class Money(commands.Cog):
                 await self.dbm.log_command(ctx.user.id, "send", [user, amount], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
                 return
 
-            transaction_time = datetime.utcnow() # 現在時刻
+            transaction_time = datetime.now(timezone.utc)  # 現在時刻
 
             # 時間変換
             jst = timezone(timedelta(hours=9))
-            time_difference = jst
             formatted_transaction_time = transaction_time.replace(tzinfo=timezone.utc)  # timezone付与
             formatted_transaction_time = formatted_transaction_time.astimezone(jst)
             formatted_transaction_time = formatted_transaction_time.strftime("%Y/%m/%d %H:%M:%S")
@@ -342,44 +361,61 @@ class Money(commands.Cog):
                 await send_error(ctx, "0x00102", "システムエラーが発生しました。\n再度お試しいただくか、", self.bot.SUPPORT_SERVER, is_followup=True)
                 await self.dbm.log_command(ctx.user.id, "send", [user, amount], ctx.guild.id if ctx.guild else None, result="0x00102")
                 return
-                
-            tax = int(amount * SEND_TAX) # 手数料
+
+            tax = int(amount * SEND_TAX)  # 手数料
 
             # データのセーブ
             async with self.dbm.pool.acquire() as conn:
                 async with conn.transaction():
                     try:
-                        await conn.execute('''
-                                        UPDATE wallet_data 
-                                        SET balance = $1, username = $2
-                                        WHERE user_id = $3
-                                        ''', sender_balance - amount, ctx.user.name, ctx.user.id)
-                        await conn.execute('''
-                                        UPDATE wallet_data 
-                                        SET balance = $1, username = $2
-                                        WHERE user_id = $3
-                                        ''', target_balance + (amount - tax), target_obj.name, target)
+                        await conn.execute(
+                            '''
+                            UPDATE wallet_data
+                            SET balance = $1, username = $2
+                            WHERE user_id = $3
+                            ''',
+                            sender_balance - amount, ctx.user.name, ctx.user.id
+                            )
+                        await conn.execute(
+                            '''
+                            UPDATE wallet_data
+                            SET balance = $1, username = $2
+                            WHERE user_id = $3
+                            ''',
+                            target_balance + (amount - tax), target_obj.name, target
+                            )
                         # transactionをDBに書き込み
-                        await conn.execute('''
-                                        INSERT INTO transactions (transaction_id, from_user_id, to_user_id, amount, tax, timestamp)
-                                        VALUES ($1, $2, $3, $4, $5, $6)
-                                        ''', transaction_id, ctx.user.id, target, (amount - tax), tax, transaction_time)
+                        await conn.execute(
+                            '''
+                            INSERT INTO transactions (
+                                transaction_id, from_user_id,
+                                to_user_id, amount,
+                                tax, timestamp
+                                )
+                            VALUES ($1, $2, $3, $4, $5, $6)
+                            ''',
+                            transaction_id, ctx.user.id,
+                            target, (amount - tax),
+                            tax, transaction_time
+                            )
 
                     except Exception as e:
                         await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                        await self.dbm.log_command(ctx.user.id, "send", [user, amount], ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                        await self.dbm.log_command(
+                            ctx.user.id, "send", [user, amount],
+                            ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})"
+                            )
                         return
 
             embed = discord.Embed(title="送金完了",
-                                description=f"**送金元**: `@{ctx.user.name}`\n"
-                                            f"**送金先**: `@{target_obj.name}`\n"
-                                            f"**送金額**: {amount - tax:,} ZNY (手数料: {tax:,} ZNY)\n"
-                                            f"**トランザクションID**: {transaction_id}\n"
-                                            f"**送金時刻**: {formatted_transaction_time} (UTC+9)",
-                                color=discord.Colour.green())
+                                  description=f"**送金元**: `@{ctx.user.name}`\n"
+                                              f"**送金先**: `@{target_obj.name}`\n"
+                                              f"**送金額**: {amount - tax:,} ZNY (手数料: {tax:,} ZNY)\n"
+                                              f"**トランザクションID**: {transaction_id}\n"
+                                              f"**送金時刻**: {formatted_transaction_time} (UTC+9)",
+                                  color=discord.Colour.green())
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "send", [user, amount], ctx.guild.id if ctx.guild else None, result="Success")
-
 
     # /giftコマンドをグループ化
     group = app_commands.Group(name="gift", description="ギフト関係のコマンド")
@@ -400,8 +436,8 @@ class Money(commands.Cog):
 
         # DBから自分の情報を取得
         async with self.dbm.pool.acquire() as conn:
-            sender_data = await conn.fetchval('SELECT balance FROM wallet_data WHERE user_id = $1',
-                                            ctx.user.id)
+            sender_data = await conn.fetchval("SELECT balance FROM wallet_data WHERE user_id = $1",
+                                              ctx.user.id)
 
         # 送金元ウォレットの存在確認
         if not sender_data:
@@ -417,22 +453,16 @@ class Money(commands.Cog):
             await self.dbm.log_command(ctx.user.id, "gift create", [amount, message], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
             return
 
-        transaction_time = datetime.utcnow() # 現在時刻
-
-        # 時間変換
-        td = 9 # UTC+9
-        time_difference = timezone(timedelta(hours=td))
-        formatted_transaction_time = transaction_time.strftime("%Y/%m/%d %H:%M:%S")
+        transaction_time = datetime.now(timezone.utc)  # 現在時刻
 
         gift_id = secrets.token_hex(10)
-
         flag = False
 
         # ギフトIDの生成
         characters = string.ascii_letters + string.digits
-        
+
         for i in range(5):
-            gift_id = ''.join(random.choice(characters) for _ in range(8))
+            gift_id = "".join(random.choice(characters) for _ in range(8))
 
             # 生成したIDが既に存在しないか確認
             async with self.dbm.pool.acquire() as conn:
@@ -451,37 +481,55 @@ class Money(commands.Cog):
             await self.dbm.log_command(ctx.user.id, "gift create", [amount, message], ctx.guild.id if ctx.guild else None, result="0x00102")
             return
 
-        tax = int(amount * SEND_TAX) # 手数料
+        tax = int(amount * SEND_TAX)  # 手数料
 
         # データのセーブ
         async with self.dbm.pool.acquire() as conn:
             async with conn.transaction():
                 try:
-                    await conn.execute('''
-                                    INSERT INTO gifts (gift_id, made_user_id, gift_type, amount, message, status, timestamp)
-                                    VALUES ($1, $2, $3, $4, $5, $6, $7)
-                                    ''', gift_id, ctx.user.id, "money", str(amount), message, "Unused", transaction_time)
-                    await conn.execute('''
-                                    UPDATE wallet_data 
-                                    SET balance = $1, username = $2
-                                    WHERE user_id = $3
-                                    ''', (sender_balance - int(amount * 1.1)), ctx.user.name, ctx.user.id)
+                    await conn.execute(
+                        '''
+                        INSERT INTO gifts (
+                            gift_id, made_user_id,
+                            gift_type, amount,
+                            message, status,
+                            timestamp
+                            )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        ''',
+                        gift_id, ctx.user.id,
+                        "money", str(amount),
+                        message, "Unused",
+                        transaction_time
+                        )
+                    await conn.execute(
+                        '''
+                        UPDATE wallet_data
+                        SET balance = $1, username = $2
+                        WHERE user_id = $3
+                        ''',
+                        (sender_balance - int(amount * 1.1)),
+                        ctx.user.name, ctx.user.id
+                        )
 
                 except Exception as e:
                     await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                    await self.dbm.log_command(ctx.user.id, "gift create", [amount, message], ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                    await self.dbm.log_command(
+                        ctx.user.id, "gift create", [amount, message],
+                        ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})"
+                        )
                     return
 
         embed = discord.Embed(title=":white_check_mark: ギフトを作成しました",
-                            description=f"**金額**: {amount:,} ZNY (手数料: {tax:,} ZNY)\n"
-                                        f":arrow_up: **上に表示されている8桁の文字列がギフトIDです**\n"
-                                        f"ギフトは`/gift receive`コマンドで受け取れます",
-                            color=discord.Colour.green())
+                              description=f"**金額**: {amount:,} ZNY (手数料: {tax:,} ZNY)\n"
+                                          f":arrow_up: **上に表示されている8桁の文字列がギフトIDです**\n"
+                                          f"ギフトは`/gift receive`コマンドで受け取れます",
+                              color=discord.Colour.green())
         await ctx.followup.send(gift_id, embed=embed, ephemeral=True)
         await self.dbm.log_command(ctx.user.id, "gift create", [amount, message], ctx.guild.id if ctx.guild else None, result="Success")
 
-
     # info
+
     @group.command(name="info", description="ギフトコードの情報を確認します")
     @app_commands.describe(code="ギフトコード")
     @app_commands.checks.cooldown(1, 3)
@@ -496,8 +544,17 @@ class Money(commands.Cog):
         try:
             # DBから情報を取得
             async with self.dbm.pool.acquire() as conn:
-                gift_data = await conn.fetchrow('SELECT made_user_id, gift_type, amount, message, status, timestamp FROM gifts WHERE gift_id = $1',
-                                                code)
+                gift_data = await conn.fetchrow(
+                    '''
+                    SELECT
+                        made_user_id, gift_type,
+                        amount, message,
+                        status, timestamp
+                    FROM gifts
+                    WHERE gift_id = $1
+                    ''',
+                    code
+                    )
 
             # 送金元ウォレットの存在確認
             if not gift_data:
@@ -508,8 +565,6 @@ class Money(commands.Cog):
             made_user_id, gift_type, amount, message, status, timestamp = gift_data
 
             # 時間変換
-            td = 9 # UTC+9
-            time_difference = timezone(timedelta(hours=td))
             timestamp_ = timestamp.strftime("%Y/%m/%d %H:%M:%S")
 
             if gift_type == "money":
@@ -535,22 +590,23 @@ class Money(commands.Cog):
                 status_ = "不明"
 
             embed = discord.Embed(title="ギフトの情報",
-                                description=f"**ギフトコード**: {code}\n"
-                                            f"**状態**: {status_}\n"
-                                            f"**内容**: {gift_description}\n"
-                                            f"**作成者**: `{made_user_id}`\n"
-                                            f"**作成時刻**: {timestamp_} (UTC)\n"
-                                            f"**メッセージ**\n{message}",
-                                color=discord.Colour.green())
+                                  description=f"**ギフトコード**: {code}\n"
+                                              f"**状態**: {status_}\n"
+                                              f"**内容**: {gift_description}\n"
+                                              f"**作成者**: `{made_user_id}`\n"
+                                              f"**作成時刻**: {timestamp_} (UTC)\n"
+                                              f"**メッセージ**\n{message}",
+                                  color=discord.Colour.green())
             embed.set_footer(text="ギフトの受け取り: /gift receive <ギフトコード>")
             await ctx.followup.send(embed=embed, ephemeral=True)
             await self.dbm.log_command(ctx.user.id, "gift info", code, ctx.guild.id if ctx.guild else None, result="Success")
-        except Exception as e:
+
+        except Exception:
             import traceback
             print(traceback.format_exc())
 
-
     # receive
+
     @group.command(name="receive", description="ギフトを受け取ります")
     @app_commands.describe(code="ギフトコード")
     @app_commands.checks.cooldown(1, 3)
@@ -568,8 +624,17 @@ class Money(commands.Cog):
 
             # DBから情報を取得
             async with self.dbm.pool.acquire() as conn:
-                gift_data = await conn.fetchrow('SELECT made_user_id, gift_type, amount, message, status, timestamp FROM gifts WHERE gift_id = $1',
-                                                code)
+                gift_data = await conn.fetchrow(
+                    '''
+                    SELECT
+                        made_user_id, gift_type,
+                        amount, message,
+                        status, timestamp
+                    FROM gifts
+                    WHERE gift_id = $1
+                    ''',
+                    code
+                    )
 
             # 送金元ウォレットの存在確認
             if not gift_data:
@@ -609,21 +674,28 @@ class Money(commands.Cog):
             else:
                 new_status = "Used"
 
-            transaction_time = datetime.utcnow() # 現在時刻
+            transaction_time = datetime.now(timezone.utc)  # 現在時刻
 
             # 時間変換
-            td = 9 # UTC+9
-            time_difference = timezone(timedelta(hours=td))
             timestamp_ = timestamp.strftime("%Y/%m/%d %H:%M:%S")
 
             if gift_type == "money":
                 # DBから情報を取得
                 async with self.dbm.pool.acquire() as conn:
-                    data = await conn.fetchval('SELECT balance FROM wallet_data WHERE user_id = $1',
-                                            ctx.user.id)
+                    data = await conn.fetchval(
+                        '''
+                        SELECT balance
+                        FROM wallet_data
+                        WHERE user_id = $1
+                        ''',
+                        ctx.user.id
+                        )
 
                 if not data:
-                    await send_error(ctx, None, "あなたはウォレットを開設していません。\n`/wallet`コマンドを実行してからお試しください。", None, is_followup=True)
+                    await send_error(
+                        ctx, None, "あなたはウォレットを開設していません。\n`/wallet`コマンドを実行してからお試しください。",
+                        None, is_followup=True
+                        )
                     await self.dbm.log_command(ctx.user.id, "gift receive", code, ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
                     return
 
@@ -633,26 +705,38 @@ class Money(commands.Cog):
                 async with self.dbm.pool.acquire() as conn:
                     async with conn.transaction():
                         try:
-                            await conn.execute('''
-                                            INSERT INTO gifts_log (gift_id, received_user_id, timestamp)
-                                            VALUES ($1, $2, $3)
-                                            ''', code, ctx.user.id, transaction_time)
-                            await conn.execute('''
-                                            UPDATE wallet_data 
-                                            SET balance = $1, username = $2
-                                            WHERE user_id = $3
-                                            ''', data + amount, ctx.user.name, ctx.user.id)
-                            await conn.execute('''
-                                            UPDATE gifts
-                                            SET status = $1
-                                            WHERE gift_id = $2
-                                            ''', new_status, code)
+                            await conn.execute(
+                                '''
+                                INSERT INTO gifts_log (gift_id, received_user_id, timestamp)
+                                VALUES ($1, $2, $3)
+                                ''',
+                                code, ctx.user.id, transaction_time
+                                )
+                            await conn.execute(
+                                '''
+                                UPDATE wallet_data
+                                SET balance = $1, username = $2
+                                WHERE user_id = $3
+                                ''',
+                                data + amount, ctx.user.name, ctx.user.id
+                                )
+                            await conn.execute(
+                                '''
+                                UPDATE gifts
+                                SET status = $1
+                                WHERE gift_id = $2
+                                ''',
+                                new_status, code
+                                )
 
                         except Exception as e:
                             await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                            await self.dbm.log_command(ctx.user.id, "gift receive", code, ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                            await self.dbm.log_command(
+                                ctx.user.id, "gift receive", code,
+                                ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})"
+                                )
                             return
-                
+
                 gift_description = f"**{amount:,} ZNY**を受け取りました"
 
             else:
@@ -660,32 +744,41 @@ class Money(commands.Cog):
                 async with self.dbm.pool.acquire() as conn:
                     async with conn.transaction():
                         try:
-                            await conn.execute('''
-                                            INSERT INTO gifts_log (gift_id, received_user_id, timestamp)
-                                            VALUES ($1, $2, $3)
-                                            ''', code, ctx.user.id, transaction_time)
-                            await conn.execute('''
-                                            UPDATE gifts
-                                            SET status = $1
-                                            WHERE gift_id = $2
-                                            ''', new_status, code)
+                            await conn.execute(
+                                '''
+                                INSERT INTO gifts_log (gift_id, received_user_id, timestamp)
+                                VALUES ($1, $2, $3)
+                                ''',
+                                code, ctx.user.id, transaction_time
+                                )
+                            await conn.execute(
+                                '''
+                                UPDATE gifts
+                                SET status = $1
+                                WHERE gift_id = $2
+                                ''',
+                                new_status, code)
 
                         except Exception as e:
                             await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                            await self.dbm.log_command(ctx.user.id, "gift receive", code, ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                            await self.dbm.log_command(
+                                ctx.user.id, "gift receive", code,
+                                ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})"
+                                )
                             return
 
                 gift_description = f"**{amount}**を受け取りました"
 
             embed = discord.Embed(title=":white_check_mark: 受け取り完了",
-                                description=f"{gift_description}\n"
-                                            f"**送信者**: `{made_user_id}`\n"
-                                            f"**メッセージ**\n{message}",
-                                color=discord.Colour.green())
+                                  description=f"{gift_description}\n"
+                                              f"**送信者**: `{made_user_id}`\n"
+                                              f"**メッセージ**\n{message}",
+                                  color=discord.Colour.green())
             embed.set_footer(text=f"受け取り時刻: {timestamp_} (UTC+9)")
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "gift receive", code, ctx.guild.id if ctx.guild else None, result="Success")
-        except Exception as e:
+
+        except Exception:
             import traceback
             print(traceback.format_exc())
 
@@ -705,11 +798,14 @@ class Money(commands.Cog):
 
         # DBでuser_idが存在するか確認
         async with self.dbm.pool.acquire() as conn:
-            result = await conn.fetchrow("""
+            result = await conn.fetchrow(
+                """
                 SELECT username, balance, exp, level, last_work, trust_rank, total_login
                 FROM wallet_data
                 WHERE user_id = $1
-            """, ctx.user.id)
+                """,
+                ctx.user.id
+                )
 
         if not result:
             await send_error(ctx, None, "あなたはウォレットを開設していません。\n`/wallet`コマンドを実行してからお試しください。", None, is_followup=True)
@@ -722,7 +818,10 @@ class Money(commands.Cog):
         seconds_difference = time_difference.total_seconds()  # 秒数に直す
 
         if seconds_difference < 1200:
-            await send_error(ctx, None, f"前回の仕事から20分経過していません。\n<t:{int(previous.timestamp()) + 1200 + 32400}:R>にお試しください。", None, is_followup=True)
+            await send_error(
+                ctx, None, f"前回の仕事から20分経過していません。\n<t:{int(previous.timestamp()) + 1200 + 32400}:R>にお試しください。",
+                None, is_followup=True
+                )
             await self.dbm.log_command(ctx.user.id, "work", None, ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
             return
 
@@ -772,7 +871,7 @@ class Money(commands.Cog):
             grade_text = grade_mapping.get(str(grade), "不明")
             new_grade_text = grade_mapping.get(str(new_grade), "不明")
             embed_description += f"\n\n:up: グレードアップ！({grade_text}→**{new_grade_text}**)"
-        
+
         # トランザクション内でまとめて処理
         async with self.dbm.pool.acquire() as conn:
             async with conn.transaction():
@@ -789,8 +888,8 @@ class Money(commands.Cog):
                     return
 
         embed = discord.Embed(title=embed_title,
-                            description=embed_description,
-                            color=discord.Colour.green())
+                              description=embed_description,
+                              color=discord.Colour.green())
 
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "work", None, ctx.guild.id if ctx.guild else None, result="Success")
@@ -829,7 +928,6 @@ class Money(commands.Cog):
         # DBでuser_idが存在するか確認
         async with self.dbm.pool.acquire() as conn:
             result = await conn.fetchrow('SELECT balance, badges, exp, total_login, trust_rank FROM wallet_data WHERE user_id = $1', int(target))
-            settings_result = await conn.fetchrow('SELECT spotify_time, spotify_total_time FROM user_settings WHERE user_id = $1', int(target))
 
         if result:
             balance = f"{result[0]:,} ZNY"
@@ -844,7 +942,7 @@ class Money(commands.Cog):
 
             elif len(badges) == 0:
                 badges = "なし"
-        
+
         else:
             balance = "(ウォレット未開設)"
             badges = "なし"
@@ -852,6 +950,7 @@ class Money(commands.Cog):
             total = 0
             level = 1
             next_xp = get_next_level_experience(exp)
+
         '''
         if settings_result:
             if settings_result[0] == True:
@@ -872,18 +971,20 @@ class Money(commands.Cog):
                                       description="",
                                       color=discord.Colour.red())
                 embed.set_author(name="Moderator✅")
-                embed.add_field(name=f"{user.name}#{user.discriminator} [Rank 500]", value="**最大ランク到達**\n**総経験値**: 39,296,362 XP", inline=False)
+                embed.add_field(name=f"{user.name}#{user.discriminator} [Rank 500]",
+                                value="**最大ランク到達**\n**総経験値**: 39,296,362 XP", inline=False)
                 embed.add_field(name="エンブレム", value="🛠️🤖", inline=True)
-                embed.add_field(name="ステータス", value=f"このユーザーはシステムBOTです", inline=True)
+                embed.add_field(name="ステータス", value="このユーザーはシステムBOTです", inline=True)
 
             else:
                 embed = discord.Embed(title="",
                                       description="",
                                       color=0xcccccc)
                 embed.set_author(name="New Worker")
-                embed.add_field(name=f"{user.name}#{user.discriminator} [Rank 1]", value="**最大ランク到達**\n**総経験値**: 0 XP", inline=False)
+                embed.add_field(name=f"{user.name}#{user.discriminator} [Rank 1]",
+                                value="**最大ランク到達**\n**総経験値**: 0 XP", inline=False)
                 embed.add_field(name="エンブレム", value="🤖", inline=True)
-                embed.add_field(name="ステータス", value=f"このユーザーはBOTです", inline=True)
+                embed.add_field(name="ステータス", value="このユーザーはBOTです", inline=True)
 
         else:
             # トラストランク別
@@ -892,7 +993,7 @@ class Money(commands.Cog):
                                       description="",
                                       color=0xcccccc)
                 embed.set_author(name="New Worker")
-    
+
             elif result['trust_rank'] == 0:
                 embed = discord.Embed(title="",
                                       description="",
@@ -942,10 +1043,14 @@ class Money(commands.Cog):
                 embed.set_author(name="New Worker")
 
             if level == 500:
-                embed.add_field(name=f"@{user.name} [Rank {level}]", value=f"**最大ランク到達**\n**総経験値**: {exp:,} XP", inline=False)
+                embed.add_field(name=f"@{user.name} [Rank {level}]",
+                                value=f"**最大ランク到達**\n**総経験値**: {exp:,} XP",
+                                inline=False)
 
             else:
-                embed.add_field(name=f"@{user.name} [Rank {level}]", value=f"あと **{next_xp:,} XP** で **Rank {min(level + 1, 500)}**\n**総経験値**: {exp:,} XP", inline=False)
+                embed.add_field(name=f"@{user.name} [Rank {level}]",
+                                value=f"あと **{next_xp:,} XP** で **Rank {min(level + 1, 500)}**\n**総経験値**: {exp:,} XP",
+                                inline=False)
 
             embed.add_field(name="エンブレム", value=badges, inline=True)
             embed.add_field(name="ステータス", value=f"**所持金**: {balance}\n**通算ログイン日数**: {total:,}日", inline=True)
@@ -953,7 +1058,7 @@ class Money(commands.Cog):
         # アイコンが設定できるならしておく
         if hasattr(user.avatar, 'key'):
             embed.set_thumbnail(url=user.avatar.url)
-        
+
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "rank", target, ctx.guild.id if ctx.guild else None, result="Success")
 
@@ -981,7 +1086,7 @@ class Money(commands.Cog):
                                            WHERE user_id = $2
                                            ''', new_balance, userid)
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 
@@ -1010,13 +1115,16 @@ class Money(commands.Cog):
             async with self.dbm.pool.acquire() as conn:
                 async with conn.transaction():
                     try:
-                        await conn.execute('''
-                                           UPDATE wallet_data
-                                           SET exp = $1, level = $2
-                                           WHERE user_id = $3
-                                           ''', new_exp, level, userid)
+                        await conn.execute(
+                            '''
+                            UPDATE wallet_data
+                            SET exp = $1, level = $2
+                            WHERE user_id = $3
+                            ''',
+                            new_exp, level, userid
+                            )
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 
@@ -1047,7 +1155,7 @@ class Money(commands.Cog):
                                            WHERE user_id = $2
                                            ''', last_str, userid)
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 
@@ -1078,7 +1186,7 @@ class Money(commands.Cog):
                                            WHERE user_id = $2
                                            ''', last_str, userid)
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 

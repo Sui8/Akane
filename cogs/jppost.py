@@ -113,7 +113,7 @@ class JpPost(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -150,7 +150,7 @@ class JpPost(commands.Cog):
 
         if "error" in result:
             await send_error(ctx, None, result['error'], None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "jppost", number, ctx.guild.id if ctx.guild else None, result=f"Failed ({e})")
+            await self.dbm.log_command(ctx.user.id, "jppost", number, ctx.guild.id if ctx.guild else None, result="Failed")
             return
 
         embed = discord.Embed(title="追跡結果", description="",
@@ -167,8 +167,9 @@ class JpPost(commands.Cog):
         embed.set_footer(text=f"追跡番号: {number}")
 
         # URLボタン
-        button = discord.ui.Button(label="Webで見る", style=discord.ButtonStyle.link,
-                                url=f"https://www.post.japanpost.jp/receive/tracking/result.php?code={number}")
+        button = discord.ui.Button(label="Webで見る",
+                                   style=discord.ButtonStyle.link,
+                                   url=f"https://www.post.japanpost.jp/receive/tracking/result.php?code={number}")
         view = discord.ui.View()
         view.add_item(button)
 

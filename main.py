@@ -4,7 +4,6 @@ import datetime
 import os
 from itertools import cycle
 import random
-import sqlite3
 import time
 
 # 外部ライブラリ
@@ -12,8 +11,7 @@ import discord
 from discord.ext import commands  # Bot Commands Framework
 from discord.ext import tasks
 from dotenv import load_dotenv  # python-dotenv
-import simplejson as json  # simplejson
-from discord import app_commands
+# import simplejson as json  # simplejson
 
 # 自作ライブラリ
 from server import keep_alive
@@ -22,8 +20,8 @@ load_dotenv()  # .env読み込み
 keep_alive()  # Webサーバー起動
 
 intents = discord.Intents.default()
-intents.message_content = True # (特権) メッセージインテント
-intents.members = True # (特権) メンバーインテント
+intents.message_content = True  # (特権) メッセージインテント
+intents.members = True  # (特権) メンバーインテント
 
 bot = commands.Bot(command_prefix=os.getenv("PREFIX"), intents=intents, help_command=None)
 
@@ -69,12 +67,14 @@ EXTENSIONS = [
 ##################################################
 
 # 起動通知
+
+
 @bot.event
 async def on_ready():
     global STATUS_LIST
 
     print("[Akane] ログインしました")
-    start_time = time.time() # 起動タイムを計測
+    start_time = time.time()  # 起動タイムを計測
     bot_guilds = len(bot.guilds)
     # bot_members = bot.users
     bot_members = 0
@@ -89,17 +89,23 @@ async def on_ready():
             async with dbm.pool.acquire() as conn:
                 async with conn.transaction():
                     try:
-                        await conn.execute("""
+                        await conn.execute(
+                            """
                             UPDATE bot_data
                             SET value = $1
                             WHERE name = 'guilds'
-                        """, str(bot_guilds))
-                        
-                        await conn.execute("""
+                            """,
+                            str(bot_guilds)
+                            )
+
+                        await conn.execute(
+                            """
                             UPDATE bot_data
                             SET value = $1
                             WHERE name = 'members'
-                        """, str(bot_members))
+                            """,
+                            str(bot_members)
+                            )
 
                     except Exception as e:
                         print(f"[Error] main: {e}")
@@ -152,6 +158,7 @@ async def change_activity():
     activity = discord.CustomActivity(name=next(STATUS_LIST))
     await bot.change_presence(activity=activity)
 
+
 # サーバー数自動更新 (更新するとcycleは先頭に戻る)
 @tasks.loop(minutes=60)
 async def update_guilds_count():
@@ -201,15 +208,18 @@ async def sync(ctx):
                 async with dbm.pool.acquire() as conn:
                     async with conn.transaction():
                         try:
-                            await conn.execute("""
+                            await conn.execute(
+                                """
                                 UPDATE bot_data
                                 SET value = $1
                                 WHERE name = 'commands_count'
-                            """, str(len(synced)))
+                                """,
+                                str(len(synced))
+                                )
 
                         except Exception as e:
                             print(f"Error: {e}")
-        
+
         embed = discord.Embed(title=":white_check_mark: 成功",
                               description=f"{len(synced)}コマンドをSyncしました",
                               color=discord.Colour.green())
@@ -251,7 +261,7 @@ async def reload(ctx):
                               color=0xff0000)
         embed.add_field(name="エラー内容", value=e)
         await ctx.reply(embed=embed, mention_author=False)
-        
+
     else:
         embed = discord.Embed(title=":white_check_mark: 成功",
                               description=f"{len(EXTENSIONS)}個のCogをリロードしました",
