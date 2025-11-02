@@ -26,8 +26,9 @@ rarity_mapping = {"0": "PROMO", "10": "PROMO", "30": "PROMO", "40": "PROMO", "50
                   "8": "👑", "81": "👑", "82": "👑", "83": "👑",
                   "11": "＊1", "12": "＊2"}
 cardtype_mapping = {"0": "グッズ", "1": "ポケモンのどうぐ", "2": "サポート", "3": "スタジアム", "4": "たねポケモン",
-                    "5": "1進化ポケモン", "6": "2進化ポケモン", "7": "たねポケモン (ex)", "8": "1進化ポケモン (ex)",
-                    "9": "2進化ポケモン (ex)"}
+                    "5": "1進化ポケモン", "6": "2進化ポケモン", "7": "たねポケモン (ポケモンex)", "8": "1進化ポケモン (ポケモンex)",
+                    "9": "2進化ポケモン (ポケモンex)",
+                    "10": "たねポケモン (メガシンカex)", "11": "1進化ポケモン (メガシンカex)", "12": "2進化ポケモン (メガシンカex)"}
 type_mapping = {"0": "草", "1": "炎", "2": "水", "3": "雷", "4": "超", "5": "闘",
                 "6": "悪", "7": "鋼", "8": "ドラゴン", "9": "無色"}
 energy_mapping = {"0": "<:Grass_Energy:1368063994723700898>", "1": "<:Fire_Energy:1368064051480891474>",
@@ -40,19 +41,25 @@ type_color_mapping = {"0": 0x93bb3b, "1": 0xe55837, "2": 0x2ca0db, "3": 0xfada00
                       "6": 0x052f2e, "7": 0xc3ced2, "8": 0xbba92e, "9": 0xe9e6e1, "10": 0x89cbea, "11": 0xc197c1,
                       "12": 0xf4c282, "13": 0xafd484}
 get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "[A1] 最強の遺伝子 ミュウツー", "A13": "[A1] 最強の遺伝子 ピカチュウ",
-                      "A1": "[A1] 最強の遺伝子", "A1a": "[A1a] 幻のいる島", "A21": "[A2] 時空の激闘 ディアルガ", "A22": "[A2] 時空の激闘 パルキア",
-                      "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
+                      "A1": "[A1] 最強の遺伝子",
+                      "A1a": "[A1a] 幻のいる島",
+                      "A21": "[A2] 時空の激闘 ディアルガ", "A22": "[A2] 時空の激闘 パルキア", "A2": "[A2] 時空の激闘",
+                      "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
                       "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
                       "A3a": "[A3a] 異次元クライシス", "A3b": "[A3b] イーブイガーデン",
                       "A41": "[A4] 空と海の導き ホウオウ", "A42": "[A4] 空と海の導き ルギア", "A4": "[A4] 空と海の導き",
                       "A4a": "[A4a] 未知なる水域", "A4b": "[A4b] ハイクラスパックex",
+                      "B11": "[B1] メガライジング メガギャラドス", "B12": "[B1] メガライジング メガバシャーモ", "B13": "[B1] メガライジング メガチルタリス",
+                      "B1": "[B1] メガライジング",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
                       "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10", "A4p": "PROMO-A Vol.11", "A4ap": "PROMO-A Vol.12",
                       "A4bp": "PROMO-A Vol.13",
-                      "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
+                      "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ",
+                      "BTS": "ショップ", "BPS": "プレミアムショップ", "BCP": "キャンペーン", "BMS": "ミッション", "BGC": "ゲットチャレンジ"}
 major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32", "A41", "A42"]
 promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "A3ap", "A3bp", "A4p", "A4ap", "A4bp", "ATS", "APS", "ACP", "AMS", "AGC"]
+promo_b_packs = ["BTS", "BPS", "BCP", "BMS", "BGC"]
 
 ##################################################
 
@@ -73,6 +80,9 @@ async def pick_cards(self, pack_id, pcs, type_select):
 
     elif pack_id in ["A41", "A42"]:
         pack_ids = ["A4", pack_id]
+
+    elif pack_id in ["B11", "B12", "B13"]:
+        pack_ids = ["B1", pack_id]
 
     else:
         pack_ids = [pack_id]
@@ -134,11 +144,21 @@ async def pick_cards(self, pack_id, pcs, type_select):
             
             else:
                 if pack_id in ["A41", "A42"]:
-                    if possibility < 0.0005:
+                    if possibility < 0.050:
                         pack_type = "god"
 
-                    elif possibility < 0.0005 + 0.08330:
-                        pack_type = "baby"
+                    elif possibility < 0.050 + 8.330:
+                        pack_type = "plus"
+
+                    else:
+                        pack_type = "normal"
+
+                elif pack_id in ["B11", "B12", "B13"]:
+                    if possibility < 0.050:
+                        pack_type = "god"
+
+                    elif possibility < 0.050 + 5.238:
+                        pack_type = "plus"
 
                     else:
                         pack_type = "normal"
@@ -153,8 +173,8 @@ async def pick_cards(self, pack_id, pcs, type_select):
 
 
             ## Step 2: 種類に応じた設定
-            # 引く枚数 +1枚処理 (A4)
-            if pack_type == "baby":
+            # 引く枚数 +1枚処理
+            if pack_type == "plus":
                 card_pcs_final = card_pcs + 1
 
             else:
@@ -234,6 +254,9 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[B1] メガライジング メガギャラドス", value="B11"),
+        discord.app_commands.Choice(name="[B1] メガライジング メガバシャーモ", value="B12"),
+        discord.app_commands.Choice(name="[B1] メガライジング メガチルタリス", value="B13"),
         discord.app_commands.Choice(name="[A4b] ハイクラスパックex", value="A4b"),
         discord.app_commands.Choice(name="[A4a] 未知なる水域", value="A4a"),
         discord.app_commands.Choice(name="[A4] 空と海の導き ホウオウ", value="A41"),
@@ -250,7 +273,7 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 リザードン", value="A11"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ミュウツー", value="A12"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ピカチュウ", value="A13"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.12", value="A4ap")])
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.13", value="A4bp")])
     @app_commands.describe(pcs="開封数")
     @app_commands.choices(pcs=[
         discord.app_commands.Choice(name="1パック", value="1"),
@@ -354,6 +377,7 @@ class PokePoke(commands.Cog):
 
     '''
     行数制限のため、一時的に削除
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.12", value="A4ap"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.11", value="A4p"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.10", value="A3bp"),
         discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.9", value="A3ap"),
@@ -459,6 +483,9 @@ class PokePoke(commands.Cog):
 
                 elif card['pack'] in promo_a_packs:
                     pack = "P-A"
+
+                elif card['pack'] in promo_b_packs:
+                    pack = "P-B"
 
                 else:
                     pack = card['pack']
@@ -570,7 +597,7 @@ class PokePoke(commands.Cog):
                         information += "\n────────────\n"
 
                         # 進化ポケモン
-                        if str(selected_card['cardtype']) in ["5", "6", "8", "9"]:
+                        if str(selected_card['cardtype']) in ["5", "6", "8", "9", "11", "12"]:
                             information += f"【進化元】{selected_card['evolution_from']}\n"
 
                         # 弱点
