@@ -6,7 +6,7 @@ import urllib.parse
 import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
-from aiodanbooru.api import DanbooruAPI  # aiodanbooru
+# from aiodanbooru.api import DanbooruAPI  # aiodanbooru
 import requests  # requests
 
 # 自作モジュール
@@ -42,7 +42,7 @@ class Nijigen(commands.Cog):
     #########################
 
     # danbooru
-
+    '''
     @app_commands.command(name="danbooru", description="Danbooruで画像検索します")
     @app_commands.checks.cooldown(2, 15)
     @app_commands.describe(tags="タグ (半角カンマ区切り)")
@@ -108,6 +108,7 @@ class Nijigen(commands.Cog):
                 embed.set_footer(text="Powered by Danbooru")
                 await ctx.followup.send(embed=embed, ephemeral=ephemeral)
                 await self.dbm.log_command(ctx.user.id, "nijigen", tags, ctx.guild.id if ctx.guild else None, result="Success")
+    '''
 
     # anime
 
@@ -150,7 +151,7 @@ class Nijigen(commands.Cog):
             await self.dbm.log_command(ctx.user.id, "animesearch", "(Image)", ctx.guild.id if ctx.guild else None, result="Success")
 
     # クールダウン
-
+    '''
     @danbooru.error
     async def danbooru_on_command_error(self, ctx: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.checks.CommandOnCooldown):
@@ -162,6 +163,7 @@ class Nijigen(commands.Cog):
                                   color=0xff0000)
             embed.set_footer(text=f"Report ID: {ctx.id}")
             return await ctx.response.send_message(embed=embed, ephemeral=True)
+    '''
 
     #########################
 

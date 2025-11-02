@@ -243,7 +243,7 @@ async def devsync(ctx):
 async def reload(ctx):
     try:
         for extention in EXTENSIONS:
-            await bot.load_extension(extension)
+            await bot.load_extension(extention)
 
     except Exception as e:
         embed = discord.Embed(title=":x: エラー",

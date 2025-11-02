@@ -985,8 +985,6 @@ class Money(commands.Cog):
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 
-            self.conn.commit()
-
             await ctx.reply(f":white_check_mark: `{userid}`に**{val:,} ZNY**与えました", mention_author=False)
 
         else:

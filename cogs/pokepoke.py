@@ -18,19 +18,23 @@ from modules.decorators import ephemeral_check, restrict_check
 
 ##################################################
 
-rarity_mapping = {"0": "PROMO", "10": "PROMO", "30": "PROMO", "40": "PROMO", "50": "PROMO", "1": "◇1", "2": "◇2",
-                                "3": "◇3", "4": "◇4", "5": "☆1", "6": "☆2",
-                                "7": "☆3", "70": "☆3",
-                                "8": "👑", "81": "👑", "82": "👑", "83": "👑",
-                                "11": "＊1", "12": "＊2"}
+# 31, 51 = ベイビィポケモン
+rarity_mapping = {"0": "PROMO", "10": "PROMO", "30": "PROMO", "40": "PROMO", "50": "PROMO",
+                  "1": "◇1", "19": "◇1 [ミラー]",  "2": "◇2", "29": "◇2 [ミラー]",
+                  "3": "◇3", "31": "◇3", "39": "◇3 [ミラー]", "4": "◇4",
+                  "5": "☆1", "51": "☆1", "6": "☆2", "7": "☆3", "70": "☆3",
+                  "8": "👑", "81": "👑", "82": "👑", "83": "👑",
+                  "11": "＊1", "12": "＊2"}
 cardtype_mapping = {"0": "グッズ", "1": "ポケモンのどうぐ", "2": "サポート", "3": "スタジアム", "4": "たねポケモン",
                     "5": "1進化ポケモン", "6": "2進化ポケモン", "7": "たねポケモン (ex)", "8": "1進化ポケモン (ex)",
                     "9": "2進化ポケモン (ex)"}
 type_mapping = {"0": "草", "1": "炎", "2": "水", "3": "雷", "4": "超", "5": "闘",
                 "6": "悪", "7": "鋼", "8": "ドラゴン", "9": "無色"}
-energy_mapping = {"0": ":green_circle:", "1": ":red_circle:", "2": ":blue_circle:", "3": ":yellow_circle:",
-                  "4": ":purple_circle:", "5": "brown_circle", "6": "black_circle", "7": "鋼",
-                  "8": "龍", "9": ":white_circle:"}
+energy_mapping = {"0": "<:Grass_Energy:1368063994723700898>", "1": "<:Fire_Energy:1368064051480891474>",
+                  "2": "<:Water_Energy:1368064328565129317>", "3": "<:Electric_Energy:1368064437289881611>",
+                  "4": "<:Psychic_Energy:1368064487571198062>", "5": "<:Fighting_Energy:1368064580496134165>",
+                  "6": "<:Dark_Energy:1368064627258167357>", "7": "<:Steel_Energy:1368064661622095912>",
+                  "8": "<:Dragon_Energy:1368064703783239720>", "9": "<:Colorless_Energy:1368064742668894238>"}
 damage_type_mapping = {"0": "+", "1": "×"}
 type_color_mapping = {"0": 0x93bb3b, "1": 0xe55837, "2": 0x2ca0db, "3": 0xfada00, "4": 0xa16aa8, "5": 0xd28916,
                       "6": 0x052f2e, "7": 0xc3ced2, "8": 0xbba92e, "9": 0xe9e6e1, "10": 0x89cbea, "11": 0xc197c1,
@@ -38,60 +42,62 @@ type_color_mapping = {"0": 0x93bb3b, "1": 0xe55837, "2": 0x2ca0db, "3": 0xfada00
 get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "[A1] 最強の遺伝子 ミュウツー", "A13": "[A1] 最強の遺伝子 ピカチュウ",
                       "A1": "[A1] 最強の遺伝子", "A1a": "[A1a] 幻のいる島", "A21": "[A2] 時空の激闘 ディアルガ", "A22": "[A2] 時空の激闘 パルキア",
                       "A2": "[A2] 時空の激闘", "A2a": "[A2a] 超克の光", "A2b": "[A2b] シャイニングハイ",
+                      "A31": "[A3] 双天の守護者 ソルガレオ", "A32": "[A3] 双天の守護者 ルナアーラ", "A3": "[A3] 双天の守護者",
+                      "A3a": "[A3a] 異次元クライシス", "A3b": "[A3b] イーブイガーデン",
+                      "A41": "[A4] 空と海の導き ホウオウ", "A42": "[A4] 空と海の導き ルギア", "A4": "[A4] 空と海の導き",
+                      "A4a": "[A4a] 未知なる水域", "A4b": "[A4b] ハイクラスパックex",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
-                      "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6",
+                      "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
+                      "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10", "A4p": "PROMO-A Vol.11", "A4ap": "PROMO-A Vol.12",
+                      "A4bp": "PROMO-A Vol.13",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ"}
-major_packs = ["A11", "A12", "A13", "A21", "A22"]
-promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "ATS", "APS", "ACP", "AMS", "AGC"]
+major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32", "A41", "A42"]
+promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "A3ap", "A3bp", "A4p", "A4ap", "A4bp", "ATS", "APS", "ACP", "AMS", "AGC"]
 
 ##################################################
 
 # パック開封関数
-async def pick_cards(self, pack_id, pcs):
-    # ゴッドパック
-    if random.random() < 0.0005:
-        god_pack = True
-
-    else:
-        god_pack = False
+async def pick_cards(self, pack_id, pcs, type_select):
+    
 
     # パック種類の確認
+    # 共通で出現するカードも探す
     if pack_id in ["A11", "A12", "A13"]:
-        where = f"pack_id IN ('A1', '{pack_id}')"
+        pack_ids = ["A1", pack_id]
 
     elif pack_id in ["A21", "A22"]:
-        where = f"pack_id IN ('A2', '{pack_id}')"
+        pack_ids = ["A2", pack_id]
+
+    elif pack_id in ["A31", "A32"]:
+        pack_ids = ["A3", pack_id]
+
+    elif pack_id in ["A41", "A42"]:
+        pack_ids = ["A4", pack_id]
 
     else:
-        where = f"pack_id = '{pack_id}'"
+        pack_ids = [pack_id]
 
     async with self.dbm.pool.acquire() as conn:
-        if god_pack:
-            # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
-            pack_info = await conn.fetchrow(f"""
-                SELECT pack_name, god_rate, pcs
-                FROM packs
-                WHERE {where}
-            """)
-
-        else:
-            # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
-            pack_info = await conn.fetchrow(f"""
-                SELECT pack_name, pull_rate, pcs
-                FROM packs
-                WHERE {where}
-            """)
+        # 1回のDB読み込みで pack_name, pull_rates, pcs, カードリストを取得
+        pack_info = await conn.fetchrow("""
+            SELECT pack_name, pull_rates, pcs
+            FROM packs
+            WHERE pack_id = ANY($1)
+        """, pack_ids)
 
         pack_name = pack_info["pack_name"]
-        pull_rate = json.loads(pack_info["pull_rate"])  # JSONをPythonの辞書に変換
         card_pcs = pack_info["pcs"]
 
-        # すべての pack_id に対応するカード情報を一度に取得
+        # pull_rateをパース (DB側をjsob型にすべきかも)
+        pull_rates_dict = json.loads(pack_info["pull_rates"])
+
+
+        # すべてのpack_idに対応するカード情報を一度に取得
         all_cards = await conn.fetch("""
             SELECT card_name, rarity
             FROM cards
-            WHERE pack = $1
-        """, pack_id)
+            WHERE pack = ANY($1)
+        """, pack_ids)
 
         # レアリティごとにカードを分類（辞書に格納）
         rarity_to_cards = {}
@@ -106,7 +112,7 @@ async def pick_cards(self, pack_id, pcs):
             if rarity not in rarity_to_cards:
                 rarity_to_cards[rarity] = []
 
-            # クラウン
+            # クラウン (ゴッドパック用に81~89も別でデータを追加する)
             if 81 <= rarity <= 89:
                 rarity_to_cards[8].append(card_name)
 
@@ -114,47 +120,82 @@ async def pick_cards(self, pack_id, pcs):
 
         # カード取得開始
         selected_cards = []
+        common_count = 0
+        g_common_count = 0
 
-        if pcs == "10":
-            common_count = 0
+        for j in range(int(pcs)):
+            ## Step 1: パックの種類を決める
+            # +1枚パックが存在するか (A4)
+            possibility = random.random()
 
-            for j in range(10):
-                for i in range(1, card_pcs + 1):
-                    rarity_prob = pull_rate.get(str(i))  # i枚目のレアリティ確率を取得
-
-                    # レアリティを確率に基づいて選択
-                    rarities = list(rarity_prob.keys())
-                    probabilities = list(rarity_prob.values())
-                    selected_rarity = int(random.choices(rarities, probabilities)[0])
-
-                    if selected_rarity in [10, 1, 2]:
-                        common_count += 1
-                        
-                    else:
-                        # Python側でレアリティごとのカードリストから選択
-                        selected_card = random.choice(rarity_to_cards[selected_rarity])
-                        f_rarity = rarity_mapping.get(str(selected_rarity), "不明")
-                        selected_cards.append(f"・{selected_card} ({f_rarity})")
+            # オプションで指定されていたらそのまま、そうでなければ抽選
+            if type_select != "random":
+                pack_type = type_select
             
-            if common_count != 0:
-                selected_cards.append(f"・ノーマルカード ×{common_count}")
+            else:
+                if pack_id in ["A41", "A42"]:
+                    if possibility < 0.0005:
+                        pack_type = "god"
 
-        else:
-            for i in range(1, card_pcs + 1):
-                rarity_prob = pull_rate.get(str(i))  # i枚目のレアリティ確率を取得
+                    elif possibility < 0.0005 + 0.08330:
+                        pack_type = "baby"
+
+                    else:
+                        pack_type = "normal"
+
+                # パック種類分岐
+                else:
+                    if possibility < 0.0005:
+                        pack_type = "god"
+
+                    else:
+                        pack_type = "normal"
+
+
+            ## Step 2: 種類に応じた設定
+            # 引く枚数 +1枚処理 (A4)
+            if pack_type == "baby":
+                card_pcs_final = card_pcs + 1
+
+            else:
+                card_pcs_final = card_pcs
+
+            # pull_rate決定
+            pull_rate = pull_rates_dict[pack_type]
+
+
+            ## Step 3: カードを引く
+            # カードをn枚取得
+            for i in range(1, card_pcs_final + 1):
+                # i枚目のレアリティ確率を取得
+                rarity_prob = pull_rate.get(str(i))
 
                 # レアリティを確率に基づいて選択
                 rarities = list(rarity_prob.keys())
                 probabilities = list(rarity_prob.values())
                 selected_rarity = int(random.choices(rarities, probabilities)[0])
 
-                if selected_rarity == 8:
-                    selected_rarity = 80 + random.randint(1, 3)
+                # ノーマルカードは枚数だけにする (10連のみ)
+                if selected_rarity in [10, 1, 2, 19, 29] and pcs == "10":
+                    common_count += 1
 
-                # Python側でレアリティごとのカードリストから選択
-                selected_card = random.choice(rarity_to_cards[selected_rarity])
-                f_rarity = rarity_mapping.get(str(selected_rarity), "不明")
-                selected_cards.append(f"・{selected_card} ({f_rarity})")
+                # ☆1, ＊1は枚数のみにする (ゴッドパックで10連のみ)
+                elif selected_rarity in [5, 11] and pcs == "10" and type_select == "god":
+                    g_common_count += 1
+                    
+                else:
+                    # レアリティごとのカードリストから選択
+                    selected_card = random.choice(rarity_to_cards[selected_rarity])
+                    f_rarity = rarity_mapping.get(str(selected_rarity), "不明")
+                    selected_cards.append(f"・{selected_card} ({f_rarity})")
+
+        # ノーマルカードは枚数にする (10連のみ)
+        if common_count != 0 and pcs == "10":
+            selected_cards.append(f"・◇1, ◇2カード ×{common_count}")
+
+        # ☆1, ＊1は枚数のみにする (ゴッドパックで10連のみ)
+        if g_common_count != 0 and pcs == "10" and type_select == "god":
+            selected_cards.append(f"・☆1, ＊1カード ×{g_common_count}")
 
         return [pack_name, selected_cards]
 
@@ -193,6 +234,14 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[A4b] ハイクラスパックex", value="A4b"),
+        discord.app_commands.Choice(name="[A4a] 未知なる水域", value="A4a"),
+        discord.app_commands.Choice(name="[A4] 空と海の導き ホウオウ", value="A41"),
+        discord.app_commands.Choice(name="[A4] 空と海の導き ルギア", value="A42"),
+        discord.app_commands.Choice(name="[A3b] イーブイガーデン", value="A3b"),
+        discord.app_commands.Choice(name="[A3a] 異次元クライシス", value="A3a"),
+        discord.app_commands.Choice(name="[A3] 双天の守護者 ソルガレオ", value="A31"),
+        discord.app_commands.Choice(name="[A3] 双天の守護者 ルナアーラ", value="A32"),
         discord.app_commands.Choice(name="[A2b] シャイニングハイ", value="A2b"),
         discord.app_commands.Choice(name="[A2a] 超克の光", value="A2a"),
         discord.app_commands.Choice(name="[A2] 時空の激闘 ディアルガ", value="A21"),
@@ -201,19 +250,18 @@ class PokePoke(commands.Cog):
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 リザードン", value="A11"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ミュウツー", value="A12"),
         discord.app_commands.Choice(name="[A1] 最強の遺伝子 ピカチュウ", value="A13"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.6", value="A2bp"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.5", value="A2ap"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.4", value="A2p"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.3", value="A1ap"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.2", value="A1p2"),
-        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.1", value="A1p")])
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.12", value="A4ap")])
     @app_commands.describe(pcs="開封数")
     @app_commands.choices(pcs=[
         discord.app_commands.Choice(name="1パック", value="1"),
         discord.app_commands.Choice(name="10パック", value="10")])
+    @app_commands.describe(option="抽選オプション")
+    @app_commands.choices(option=[
+        discord.app_commands.Choice(name="通常封入", value="normal"),
+        discord.app_commands.Choice(name="レア封入", value="god")])
     @ephemeral_check
     @restrict_check
-    async def open(self, ctx: discord.Interaction, pack: str, pcs: str = None):
+    async def open(self, ctx: discord.Interaction, pack: str, pcs: str = "1", option: str = "random"):
         try:
             ephemeral = ctx.extras.get('ephemeral', False)
             await ctx.response.defer()
@@ -222,7 +270,7 @@ class PokePoke(commands.Cog):
                 await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
                 return
 
-            pack_name, selected_cards = await pick_cards(self, pack, pcs)
+            pack_name, selected_cards = await pick_cards(self, pack, pcs, option)
 
             # タイトルをパック数に応じて変更する
             if pcs == "10":
@@ -248,7 +296,7 @@ class PokePoke(commands.Cog):
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     return
 
-                pack_name, selected_cards = await pick_cards(self, pack, pcs)
+                pack_name, selected_cards = await pick_cards(self, pack, pcs, option)
 
                 embed = discord.Embed(
                     title=f"@{interaction.user.name} の開封結果",
@@ -304,6 +352,21 @@ class PokePoke(commands.Cog):
             import traceback
             print(traceback.format_exc())
 
+    '''
+    行数制限のため、一時的に削除
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.11", value="A4p"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.10", value="A3bp"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.9", value="A3ap"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.8", value="A3p2"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.7", value="A3p"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.6", value="A2bp"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.5", value="A2ap"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.4", value="A2p"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.3", value="A1ap"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.2", value="A1p2"),
+        discord.app_commands.Choice(name="[PROMO] PROMO-A Vol.1", value="A1p")
+    '''
+
 
     # info
     @group.command(name="info", description="ポケポケのカード情報を表示する (最大25件まで検索可能)")
@@ -330,32 +393,53 @@ class PokePoke(commands.Cog):
             # 1回のDB読み込みで pack_name, pull_rate, pcs, カードリストを取得
             # ついでにidが存在するデータも取りに行く
             result = await conn.fetch(f"""
-                SELECT c.card_name, c.card_id, c.rarity, c.hp, c.type, c.cardtype, 
+                SELECT 
+                    c.card_name, c.card_id, c.rarity, c.hp, c.type, c.cardtype, 
                     c.evolution_from, c.description, 
                     COALESCE(cs.description, c.spec_id::TEXT) AS spec_desc,
                     COALESCE(sk.description, NULL) AS skill_desc,
                     COALESCE(sk.skill_name, NULL) AS skill_name,
-                    COALESCE(ca.description, NULL) AS ability_desc,
-                    COALESCE(ca.ability_name, NULL) AS ability_name,
-                    COALESCE(ca.damage, NULL) AS ability_damage,
-                    COALESCE(ca.damage_type, NULL) AS ability_damage_type,  
-                    COALESCE(ca.energy, NULL) AS ability_energy,
+                    
+                    ARRAY_AGG(COALESCE(ca.ability_name, 'None')) AS ability_name,
+                    ARRAY_AGG(COALESCE(ca.description, 'None')) AS ability_desc,
+                    ARRAY_AGG(COALESCE(ca.damage::TEXT, 'None')) AS ability_damage,
+                    ARRAY_AGG(COALESCE(ca.damage_type::TEXT, 'None')) AS ability_damage_type,
+
+                    ARRAY_AGG(
+                        CASE
+                            WHEN ca.energy IS NULL THEN ARRAY['None']::TEXT[]
+                            ELSE ARRAY[ca.energy]
+                        END
+                    ) AS ability_energy,
+
                     c.away, c.effective, c.pack,
+
                     GREATEST(
                         similarity(c.card_name, $1),
                         similarity(c.card_name, $2),
-                        similarity(c.card_name, $3)
+                        similarity(c.card_name, $3),
+                        similarity(c.card_name, $4)
                     ) AS similarity_score
+
                 FROM cards c
                 LEFT JOIN card_specs cs ON c.spec_id = cs.spec_id
                 LEFT JOIN card_skills sk ON c.skill_id = sk.skill_id
-                LEFT JOIN card_abilities ca ON c.ability_id = ca.ability_id
-                WHERE c.card_name ILIKE $1 OR c.card_name ILIKE $2 OR c.card_name ILIKE $3
-                ORDER BY similarity_score DESC, c.card_id 
-                LIMIT 25
-            """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%")
+                LEFT JOIN card_abilities ca ON ca.ability_id = ANY(c.ability_id)
 
-                    
+                WHERE c.card_name ILIKE $1
+                OR c.card_name ILIKE $2
+                OR c.card_name ILIKE $3
+                OR c.card_name ILIKE $4
+
+                GROUP BY 
+                    c.card_id, c.card_name, c.rarity, c.hp, c.type, c.cardtype, 
+                    c.evolution_from, c.description, cs.description, c.spec_id,
+                    sk.description, sk.skill_name, c.away, c.effective, c.pack
+
+                ORDER BY similarity_score DESC, c.card_id
+                LIMIT 25
+            """, f"%{name_z}%", f"%{name_kana}%", f"%{name_hira}%", f"%{name}%")
+
         if not result:
             embed = discord.Embed(title=":x: 検索失敗",
                                 description="一致するカードが見つかりませんでした",
@@ -392,9 +476,9 @@ class PokePoke(commands.Cog):
                 labels[str(card['card_id'])] = label
                 options.append(discord.SelectOption(label=label, value=card['card_id']))
             
-            # ドロップダウンメニューを作成
+            # ドロップダウンメニューとボタンを作成
             select = discord.ui.Select(placeholder="カードを選んでください", options=options)
-
+            
             # ドロップダウンが選ばれた時のコールバック
             async def select_callback(interaction):
                 if interaction.user != ctx.user:
@@ -413,7 +497,7 @@ class PokePoke(commands.Cog):
                     # ドロップダウンを作成
                     select = discord.ui.Select(placeholder="他のカードを見る", options=options)
                     select.callback = select_callback
-                    view = discord.ui.View(timeout=300)
+                    view = discord.ui.View(timeout=600)
                     view.add_item(select)
 
                     # タイムアウト後の処理
@@ -436,58 +520,104 @@ class PokePoke(commands.Cog):
 
                     # ポケモンの場合
                     elif int(selected_card['cardtype']) >= 4:
-                        information += f" / {type_mapping.get(str(selected_card['type']), '不明')}\n"
-                        information += f"【HP】{selected_card['hp']}\n"
-                        information += f"【弱点】{type_mapping.get(str(selected_card['effective']), '')}\n"
+                        information += f" / HP {selected_card['hp']} {energy_mapping.get(str(selected_card['type']), '不明')}\n"
+                        information += "────────────\n"
 
-                        if selected_card['away'] >= 0:
-                            information += f"【にげる】{'✪️' * int(selected_card['away'])}\n"
+                        # 特性
+                        if selected_card['skill_name']:
+                            skill_information = f"**[特性] {selected_card['skill_name']}**\n"
+
+                            # 必ずあるけどエラー対策
+                            if selected_card['skill_desc']:
+                                skill_information += f"{selected_card['skill_desc']}\n\n"
+
+                            else:
+                                skill_information += "不明\n\n"
+
+                            # informationに合成する
+                            information += skill_information
+
+                        # ワザ
+                        if selected_card['ability_name'][0] != "None":
+                            abilities_information = []
+
+                            # ワザの個数分だけデータ追加
+                            for i in range(len(selected_card['ability_name'])):
+                                # energy
+                                energy_list = ast.literal_eval(selected_card['ability_energy'][i][0])
+                                energy = "".join(energy_mapping[str(x)] for x in energy_list)
+
+                                # damage_type
+                                if selected_card['ability_damage_type'][i] != "None":
+                                    damage_type = damage_type_mapping.get(str(selected_card['ability_damage_type'][i]), "")
+
+                                else:
+                                    damage_type = ""
+
+                                ability_information = f"**{energy} {selected_card['ability_name'][i]} {selected_card['ability_damage'][i] if selected_card['ability_damage'][i] != "None" else ''}{damage_type}**"
+
+                                if selected_card['ability_desc'][i] != "None":
+                                    ability_information += f"\n{selected_card['ability_desc'][i]}"
+
+                                abilities_information.append(ability_information)
+
+                            # informationに合成する
+                            information += "\n\n".join(abilities_information)
+
+                        else:
+                            information += "特性・ワザ情報不明"
+
+                        information += "\n────────────\n"
 
                         # 進化ポケモン
                         if str(selected_card['cardtype']) in ["5", "6", "8", "9"]:
                             information += f"【進化元】{selected_card['evolution_from']}\n"
 
+                        # 弱点
+                        flee = energy_mapping.get(str(selected_card['effective']), '')
+
+                        if flee:
+                            information += f"【弱点】{flee}+20\n"
+
+                        else:
+                            information += f"【弱点】\n"
+
+                        if selected_card['away'] >= 0:
+                            information += f"【にげる】{'<:Colorless_Energy:1368064742668894238>' * int(selected_card['away'])}\n"
+
                         information += f"【入手方法】{get_source_mapping.get(str(selected_card['pack']), '不明')}"
-
-                        # ワザ
-                        if selected_card['ability_name']:
-                            # energy
-                            energy_list = ast.literal_eval(selected_card['ability_energy'])
-                            energy = "".join(energy_mapping[str(x)] for x in energy_list)
-
-                            # damage_type
-                            if selected_card['ability_damage_type']:
-                                damage_type = damage_type_mapping.get(str(selected_card['ability_damage_type']), "")
-
-                            else:
-                                damage_type = ""
-
-                            information += f"\n\n【ワザ】\n**{energy} {selected_card['ability_name']} {selected_card['ability_damage'] if selected_card['ability_damage'] is not None else ''}{damage_type}**"
-
-                            if selected_card['ability_desc']:
-                                information += f"\n{selected_card['ability_desc']}"
 
                         color = type_color_mapping.get(str(selected_card['type']), 0xffffff)
 
                     # それ以外の場合
                     else:
-                        information += f"\n【入手方法】{get_source_mapping.get(str(selected_card['pack']), '不明')}"
+                        information += "\n────────────\n"
 
                         if selected_card['spec_desc']:
-                            information += f"\n\n【効果】{selected_card['spec_desc']}"
+                            information += f"{selected_card['spec_desc']}\n"
+
+                        else:
+                            information += "効果不明\n"
+
+                        information += "────────────\n"
+
+                        information += f"【入手方法】{get_source_mapping.get(str(selected_card['pack']), '不明')}"
 
                         color = type_color_mapping.get(str(int(selected_card['cardtype']) + 10), 0xffffff)
 
                     embed = discord.Embed(title=f"{selected_card_label}",
                                           description=information,
                                           color=color)
+                    # クレジット
+                    embed.set_footer(text="画像引用元: deviantart.com/biochao")
+
                     await interaction.response.edit_message(embed=embed, view=view)
                 except:
                     import traceback
                     print(traceback.format_exc())
 
             select.callback = select_callback
-            view = discord.ui.View(timeout=300)
+            view = discord.ui.View(timeout=600)
             view.add_item(select)
 
             # タイムアウト後の処理
