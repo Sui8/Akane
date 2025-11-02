@@ -132,7 +132,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
         for j in range(int(pcs)):
             # - Step 1: パックの種類を決める -
             # +1枚パックが存在するか (A4)
-            possibility = random.random()
+            possibility = random.random() * 100
 
             # オプションで指定されていたらそのまま、そうでなければ抽選
             if type_select != "random":
