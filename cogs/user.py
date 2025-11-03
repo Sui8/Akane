@@ -17,18 +17,18 @@ from modules.decorators import ephemeral_check, restrict_check
 ##################################################
 
 ALL_BADGES = [["staff", "<:Discord_Staff:1310243625980133416>"],
-["partner", "<:Discord_Partner:1310244200222162984>"],
-["hypesquad", "<:HypeSquad_Events:1310244618478293002>"],
-["bug_hunter", "<:Bug_Hunter:1310244948821413928>"],
-["bug_hunter_level_2", "<:Gold_Bug_Hunter:1310246180210343936>"],
-["hypesquad_balance", "<:HypeSquad_Balance:1310241795418099792>"],
-["hypesquad_bravery", "<:HypeSquad_Bravery:1310242994057908305>"],
-["hypesquad_brilliance", "<:HypeSquad_Brilliance:1310243053612830771>"],
-["early_supporter", "<:Early_Supporter:1310245165977567232>"],
-["verified_bot_developer", "<:Early_Verified_Bot_Developer:1310246728120664205>"],
-["discord_certified_moderator", "<:Moderator_Programs_Alumni:1310254854886785137>"],
-["active_developer", "<:Active_Developer:1310255185276309677>"]
-]
+              ["partner", "<:Discord_Partner:1310244200222162984>"],
+              ["hypesquad", "<:HypeSquad_Events:1310244618478293002>"],
+              ["bug_hunter", "<:Bug_Hunter:1310244948821413928>"],
+              ["bug_hunter_level_2", "<:Gold_Bug_Hunter:1310246180210343936>"],
+              ["hypesquad_balance", "<:HypeSquad_Balance:1310241795418099792>"],
+              ["hypesquad_bravery", "<:HypeSquad_Bravery:1310242994057908305>"],
+              ["hypesquad_brilliance", "<:HypeSquad_Brilliance:1310243053612830771>"],
+              ["early_supporter", "<:Early_Supporter:1310245165977567232>"],
+              ["verified_bot_developer", "<:Early_Verified_Bot_Developer:1310246728120664205>"],
+              ["discord_certified_moderator", "<:Moderator_Programs_Alumni:1310254854886785137>"],
+              ["active_developer", "<:Active_Developer:1310255185276309677>"]
+              ]
 
 ##################################################
 
@@ -36,14 +36,14 @@ ALL_BADGES = [["staff", "<:Discord_Staff:1310243625980133416>"],
 
 
 class User(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
-
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -131,7 +131,7 @@ class User(commands.Cog):
             except Exception:
                 pass
 
-            created_at = int(user.created_at.timestamp()) # アカウント作成日時
+            created_at = int(user.created_at.timestamp())  # アカウント作成日時
 
             # バッジの所持状況確認
             try:
@@ -143,14 +143,13 @@ class User(commands.Cog):
             except Exception:
                 owned_badges = ["(取得失敗)"]
 
-            
             embed.add_field(name="ユーザーID", value=target, inline=True)
             embed.add_field(name="ニックネーム", value=user.display_name, inline=True)
             embed.add_field(name="メンション", value=user.mention, inline=True)
             embed.add_field(name="バッジ", value=f"{''.join(owned_badges)}", inline=True)
             embed.add_field(name="アカウント種別", value=account_type, inline=True)
             embed.add_field(name="アカウント作成日時", value=f"<t:{created_at}:f> (<t:{created_at}:R>)", inline=True)
-            #embed.set_footer(text=f"アカウント作成日時: <t:{created_at}:f> (<t:{created_at}:R>)")
+            # embed.set_footer(text=f"アカウント作成日時: <t:{created_at}:f> (<t:{created_at}:R>)")
 
             if hasattr(user.avatar, 'key'):
                 embed.set_thumbnail(url=user.avatar.url)
@@ -240,7 +239,12 @@ class User(commands.Cog):
     @app_commands.describe(reason="理由")
     @ephemeral_check
     @restrict_check
-    async def massban(self, ctx: discord.Interaction, users: str, delete_days: app_commands.Range[str, 0, 7] = 0, reason: app_commands.Range[str, 1, 400] = None):
+    async def massban(
+            self,
+            ctx: discord.Interaction,
+            users: str,
+            delete_days: app_commands.Range[str, 0, 7] = 0,
+            reason: app_commands.Range[str, 1, 400] = None):
         ephemeral = ctx.extras.get('ephemeral', False)
 
         await ctx.response.defer()
@@ -251,7 +255,10 @@ class User(commands.Cog):
 
         if not ctx.guild:
             await send_error(ctx, None, "このコマンドはサーバー以外で使用できません", None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "massban", [users, delete_days, reason], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
+            await self.dbm.log_command(
+                ctx.user.id, "massban", [users, delete_days, reason],
+                ctx.guild.id if ctx.guild else None, result="Failed (Mistake)"
+                )
             return
 
         # 正規表現でID抽出
@@ -272,20 +279,29 @@ class User(commands.Cog):
 
         except Exception:
             await send_error(ctx, None, "ユーザー名またはIDの形式が正しくありません", None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "massban", [users, delete_days, reason], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
+            await self.dbm.log_command(
+                ctx.user.id, "massban", [users, delete_days, reason],
+                ctx.guild.id if ctx.guild else None, result="Failed (Mistake)"
+                )
             return
 
         # 不正な値を処理
         if len(target_list) > 200:
             await send_error(ctx, None, "一度にBANできる上限は200人までです", None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "massban", [users, delete_days, reason], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
+            await self.dbm.log_command(
+                ctx.user.id, "massban", [users, delete_days, reason],
+                ctx.guild.id if ctx.guild else None, result="Failed (Mistake)"
+                )
             return
-        
+
         if len(target_list) == 0:
             await send_error(ctx, None, "ユーザー名またはIDの形式が正しくありません", None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "massban", [users, delete_days, reason], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
+            await self.dbm.log_command(
+                ctx.user.id, "massban", [users, delete_days, reason],
+                ctx.guild.id if ctx.guild else None, result="Failed (Mistake)"
+                )
             return
-        
+
         # 理由
         if reason:
             reason += f" (コマンド実行者: @{ctx.user.name})"
@@ -303,7 +319,10 @@ class User(commands.Cog):
 
         except Exception as e:
             await send_error(ctx, None, "ユーザー名/IDが正しく、Botに適切な権限があることを確認してください。", None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "massban", [users, delete_days, reason], ctx.guild.id if ctx.guild else None, result=f"Failed ({e})")
+            await self.dbm.log_command(
+                ctx.user.id, "massban", [users, delete_days, reason],
+                ctx.guild.id if ctx.guild else None, result=f"Failed ({e})"
+                )
 
         else:
             successful_count = len(result.banned)
@@ -314,19 +333,19 @@ class User(commands.Cog):
                 failed_bans = "なし"
 
             embed = discord.Embed(title=":white_check_mark: 実行完了",
-                                    description="一括BANが完了しました。\n",
-                                    timestamp=datetime.datetime.now(),
-                                    color=discord.Colour.green())
+                                  description="一括BANが完了しました。\n",
+                                  timestamp=datetime.datetime.now(),
+                                  color=discord.Colour.green())
             try:
                 embed.set_footer(text=f"実行者: @{ctx.user.name}",
-                                    icon_url=ctx.user.avatar.url)
+                                 icon_url=ctx.user.avatar.url)
 
             except Exception:
                 pass
 
             embed.add_field(name="実行結果",
                             value=f":white_check_mark: 成功したユーザー数: **{successful_count}人**\n"
-                                f":x: 失敗したユーザー数: **{failed_count}人**",
+                            f":x: 失敗したユーザー数: **{failed_count}人**",
                             inline=True)
             embed.add_field(name="BANに失敗したユーザー (15人まで表示)",
                             value=failed_bans,
@@ -338,8 +357,8 @@ class User(commands.Cog):
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "massban", [users, delete_days, reason], ctx.guild.id if ctx.guild else None, result="Success")
 
-
     # team
+
     @app_commands.command(name="team", description="チーム分けする")
     @app_commands.describe(users="チーム分けする項目を空白区切りで入力 (220項目まで)", teams="分けるチーム数")
     @ephemeral_check
@@ -360,7 +379,7 @@ class User(commands.Cog):
         if len(users) < teams:
             await send_error(ctx, None, "チーム数が項目より多いです。", None, is_followup=True)
             return
-        
+
         if len(users) > 220:
             await send_error(ctx, None, "指定された項目数が多すぎます。\n220項目以下にしてください。", None, is_followup=True)
             return
@@ -374,7 +393,7 @@ class User(commands.Cog):
 
         # 結果をフォーマット
         embed = discord.Embed(title="チーム分け結果",
-                            description="", color=discord.Colour.green())
+                              description="", color=discord.Colour.green())
 
         for idx, team in enumerate(teams, start=1):
             embed.add_field(name=f"チーム #{idx}",

@@ -22,7 +22,7 @@ class Scratch(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -136,7 +136,10 @@ class Scratch(commands.Cog):
 
         except Exception:
             await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
-            await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
+            await self.dbm.log_command(
+                ctx.user.id, "scratch ff", [mode, target, user],
+                ctx.guild.id if ctx.guild else None, result="Failed (Exception)"
+                )
 
         else:
             if mode == "following":
@@ -145,8 +148,10 @@ class Scratch(commands.Cog):
 
                 except Exception:
                     await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
-                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
-
+                    await self.dbm.log_command(
+                        ctx.user.id, "scratch ff", [mode, target, user],
+                        ctx.guild.id if ctx.guild else None, result="Failed (Exception)"
+                        )
 
                 else:
                     if data:
@@ -159,7 +164,10 @@ class Scratch(commands.Cog):
                                           description=f"`@{target}`は`@{user}`を**フォロー{status}**",
                                           color=discord.Colour.green())
                     await ctx.followup.send(embed=embed, ephemeral=ephemeral)
-                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Success")
+                    await self.dbm.log_command(
+                        ctx.user.id, "scratch ff", [mode, target, user],
+                        ctx.guild.id if ctx.guild else None, result="Success"
+                        )
 
             if mode == "follower":
                 try:
@@ -167,8 +175,10 @@ class Scratch(commands.Cog):
 
                 except Exception:
                     await send_error(ctx, None, "ユーザーを取得できませんでした", None, is_followup=True)
-                    await self.dbm.log_command(ctx.user.id, "scratch ff", [mode, target, user], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
-
+                    await self.dbm.log_command(
+                        ctx.user.id, "scratch ff", [mode, target, user],
+                        ctx.guild.id if ctx.guild else None, result="Failed (Exception)"
+                        )
 
                 else:
                     if data:

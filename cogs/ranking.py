@@ -1,15 +1,13 @@
 # 組み込みライブラリ
 import os
 from datetime import datetime, timezone, timedelta
-from zoneinfo import ZoneInfo  # JST設定用
-import sqlite3
 
 # 外部ライブラリ
 import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
 from dotenv import load_dotenv  # python-dotenv
-import simplejson as json  # simplejson
+# import simplejson as json  # simplejson
 
 # 自作モジュール
 from modules.utils import send_error
@@ -37,7 +35,7 @@ class Ranking(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -98,7 +96,7 @@ class Ranking(commands.Cog):
                     NULL AS user_balance, NULL AS user_username, NULL AS user_rank
                 FROM user_data
                 LEFT JOIN user_rank ON user_rank.user_id = user_data.user_id
-                
+
                 UNION ALL
 
                 SELECT user_info.user_id, user_info.balance, user_info.username, (SELECT rank FROM rank_info),
@@ -120,7 +118,7 @@ class Ranking(commands.Cog):
 
             if record['rank'] <= 10:
                 if record['user_id'] == ctx.user.id:
-                    if user_ranked == False:
+                    if user_ranked is False:
                         user_ranked = True
 
                     else:
@@ -147,8 +145,8 @@ class Ranking(commands.Cog):
         formatted_now_jst = now_jst.strftime('%Y/%m/%d %H:%M:%S')
 
         embed = discord.Embed(title="所持金ランキング",
-                            description=desc,
-                            color=discord.Colour.green())
+                              description=desc,
+                              color=discord.Colour.green())
         embed.set_footer(text=f"ランキング取得時刻: {formatted_now_jst}")
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "ranking money", None, ctx.guild.id if ctx.guild else None, result="Success")
@@ -196,7 +194,7 @@ class Ranking(commands.Cog):
                     NULL AS user_level, NULL AS user_username, NULL AS user_rank
                 FROM user_data
                 LEFT JOIN user_rank ON user_rank.user_id = user_data.user_id
-                
+
                 UNION ALL
 
                 SELECT user_info.user_id, user_info.level, user_info.username, (SELECT rank FROM rank_info),
@@ -214,11 +212,11 @@ class Ranking(commands.Cog):
         for record in result:
             if record['user_id'] == ctx.user.id:
                 user_rank = record['rank']
-                user_balance = record['user_level']
+                # user_balance = record['user_level']
 
             if record['rank'] <= 10:
                 if record['user_id'] == ctx.user.id:
-                    if user_ranked == False:
+                    if user_ranked is False:
                         user_ranked = True
 
                     else:
@@ -239,14 +237,14 @@ class Ranking(commands.Cog):
         desc += f"\n**[あなたの順位]**\n{user_rank_data}"
 
         # 現在時刻
-        now = datetime.now(timezone.utc) # 現在時刻(UTC)
+        now = datetime.now(timezone.utc)  # 現在時刻(UTC)
         jst = timezone(timedelta(hours=9))
         now_jst = now.astimezone(jst)
         formatted_now_jst = now_jst.strftime('%Y/%m/%d %H:%M:%S')
 
         embed = discord.Embed(title="ユーザーランクランキング",
-                            description=desc,
-                            color=discord.Colour.green())
+                              description=desc,
+                              color=discord.Colour.green())
         embed.set_footer(text=f"ランキング取得時刻: {formatted_now_jst}")
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "ranking level", None, ctx.guild.id if ctx.guild else None, result="Success")
@@ -293,14 +291,13 @@ class Ranking(commands.Cog):
                     NULL AS user_hits, NULL AS user_username, NULL AS user_rank
                 FROM user_data
                 LEFT JOIN user_rank ON user_rank.user_id = user_data.user_id
-                
+
                 UNION ALL
 
                 SELECT user_info.user_id, user_info.hits, user_info.username, (SELECT rank FROM rank_info),
                     user_info.hits AS user_hits, user_info.username AS user_username, (SELECT rank FROM rank_info) AS user_rank
                 FROM user_info
             ''', ctx.user.id)
-
 
         # トップ10ユーザーと自分の順位を分ける
         top10_users = []
@@ -316,7 +313,7 @@ class Ranking(commands.Cog):
 
             if record['rank'] <= 10:
                 if record['user_id'] == ctx.user.id:
-                    if user_ranked == False:
+                    if user_ranked is False:
                         user_ranked = True
 
                     else:
@@ -343,8 +340,8 @@ class Ranking(commands.Cog):
         formatted_now_jst = now_jst.strftime('%Y/%m/%d %H:%M:%S')
 
         embed = discord.Embed(title="🦌「しかのこ」ランキング",
-                            description=desc,
-                            color=discord.Colour.green())
+                              description=desc,
+                              color=discord.Colour.green())
         embed.set_footer(text=f"ランキング取得時刻: {formatted_now_jst}")
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
         await self.dbm.log_command(ctx.user.id, "ranking shikanoko", None, ctx.guild.id if ctx.guild else None, result="Success")

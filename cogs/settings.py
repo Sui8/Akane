@@ -1,12 +1,10 @@
 # 組み込みライブラリ
-import datetime
 import traceback
 
 # 外部ライブラリ
 import discord
 from discord import app_commands
 from discord.ext import commands  # Bot Commands Framework
-from discord.ext import tasks
 import simplejson as json
 
 # 自作モジュール
@@ -27,7 +25,7 @@ class RestrictView(discord.ui.View):
         self.message = None  # メッセージを保存するための変数
         self.all_commands = list(set(all_commands))  # 重複防止
         self.all_commands = []
-        self.all_commands = sorted(set(all_commands)) # 昇順ソート
+        self.all_commands = sorted(set(all_commands))  # 昇順ソート
         self.page = 0
         self.per_page = 25
 
@@ -36,7 +34,6 @@ class RestrictView(discord.ui.View):
         self.add_item(self.dropdown)
         self.add_pagination_buttons()
         self.add_bulk_buttons()
-
 
     # ボタンがクリックされたときに実行されるコールバック関数
     async def button_callback(self, interaction: discord.Interaction):
@@ -53,20 +50,21 @@ class RestrictView(discord.ui.View):
                     self.page -= 1
                     await self.update_dropdown(interaction)
 
-            except Exception as e:
+            except Exception:
                 print("[ERROR] 前のページに移動エラー")
                 traceback.print_exc()
-                await interaction.response.send_message(f":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
+                await interaction.response.send_message(":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
 
         elif interaction.data["custom_id"] == "next_page":
             try:
                 if (self.page + 1) * self.per_page < len(self.all_commands):
                     self.page += 1
                     await self.update_dropdown(interaction)
-            except Exception as e:
+
+            except Exception:
                 print("[ERROR] 次のページに移動エラー")
                 traceback.print_exc()
-                await interaction.response.send_message(f":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
+                await interaction.response.send_message(":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
 
         elif interaction.data["custom_id"] == "restrict_all":
             try:
@@ -78,10 +76,10 @@ class RestrictView(discord.ui.View):
                     )
                 await self.update_dropdown(interaction)
 
-            except Exception as e:
+            except Exception:
                 print("[ERROR] 一括制限エラー")
                 traceback.print_exc()
-                await interaction.response.send_message(f":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
+                await interaction.response.send_message(":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
 
         elif interaction.data["custom_id"] == "unrestrict_all":
             try:
@@ -93,10 +91,10 @@ class RestrictView(discord.ui.View):
                     )
                 await self.update_dropdown(interaction)
 
-            except Exception as e:
+            except Exception:
                 print("[ERROR] 一括解除エラー")
                 traceback.print_exc()
-                await interaction.response.send_message(f":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
+                await interaction.response.send_message(":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
 
     def add_pagination_buttons(self):
         """ページ切り替えボタンを追加"""
@@ -186,11 +184,11 @@ class RestrictView(discord.ui.View):
                 )
 
             await interaction.response.edit_message(embed=self.get_embed(), view=self)
-        except Exception as e:
+
+        except Exception:
             print("[ERROR] ドロップダウン選択エラー")
             traceback.print_exc()
-            await interaction.response.send_message(f":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
-
+            await interaction.response.send_message(":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
 
     async def update_dropdown(self, interaction):
         """ドロップダウンの更新"""
@@ -204,11 +202,11 @@ class RestrictView(discord.ui.View):
 
             self.update_ui()
             await interaction.response.edit_message(embed=self.get_embed(), view=self)
-        except Exception as e:
+
+        except Exception:
             print("[ERROR] ドロップダウン更新エラー")
             traceback.print_exc()
-            await interaction.response.send_message(f":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
-
+            await interaction.response.send_message(":x: エラーが発生しました。\nサポートサーバーまでお問い合わせください。", ephemeral=True)
 
     def get_embed(self):
         """現在の制限状況をEmbedで表示"""
@@ -230,32 +228,35 @@ class RestrictView(discord.ui.View):
     async def on_timeout(self):
         """タイムアウト時に全てのボタンとドロップダウンを無効化"""
         for item in self.children:
-            item.disabled = True  # 全てのUIコンポーネントを無効化
+            item.disabled = True  # UIコンポーネントを無効化
 
         try:
             if self.message:
-                await self.message.edit(view=self)  # UI を無効化して更新
+                await self.message.edit(view=self)  # UIを無効化して更新
+
             else:
                 print("OMG")
-        except Exception as e:
+
+        except Exception:
             print("[ERROR] タイムアウト時のUI更新エラー")
             traceback.print_exc()
 
 ##################################################
 
+
 ''' コマンド '''
 
 
 class Settings(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
         self.cache = {}  # キャッシュを使ってDBアクセスを減らす
 
-
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -286,11 +287,12 @@ class Settings(commands.Cog):
                         guild_id, None, None, json.dumps([]))
 
                 return set()
-        except Exception as e:
+
+        except Exception:
             print("[ERROR] データベース取得エラー")
             traceback.print_exc()
             return set()
-        
+
     #############################
 
     # /settingsコマンドをグループ化
@@ -307,22 +309,28 @@ class Settings(commands.Cog):
 
         # DBでuser_idが存在するか確認
         async with self.dbm.pool.acquire() as conn:
-            result = await conn.fetchrow('SELECT language, timezone, ephemeral, spotify_time, game_time FROM user_settings WHERE user_id = $1', ctx.user.id)
+            result = await conn.fetchrow(
+                """
+                SELECT language, timezone, ephemeral, spotify_time, game_time
+                FROM user_settings WHERE user_id = $1
+                """,
+                ctx.user.id
+                )
 
         if not result:
             # 未設定の場合初期値を与えておく
             result = ["未設定", "未設定", False, False, False]
 
         description = f"言語: **{result[0] or '未設定'}**\n" \
-                    + f"タイムゾーン: **{result[1] or '未設定'}**\n" \
-                    + f"コマンド出力を非公開(一部非対応): **{'有効' if result[2] else '無効'}**\n" \
-                    + f"Spotifyの再生時間を記録: **{'有効' if result[3] else '無効'}**\n" \
-                    + f"ゲームのプレイ時間を記録: **{'有効' if result[4] else '無効'}**\n"
+            + f"タイムゾーン: **{result[1] or '未設定'}**\n" \
+            + f"コマンド出力を非公開(一部非対応): **{'有効' if result[2] else '無効'}**\n" \
+            + f"Spotifyの再生時間を記録: **{'有効' if result[3] else '無効'}**\n" \
+            + f"ゲームのプレイ時間を記録: **{'有効' if result[4] else '無効'}**\n"
 
-        embed = discord.Embed(title=f"設定情報",
-                            description="",
-                            color=discord.Colour.green())
-        
+        embed = discord.Embed(title="設定情報",
+                              description="",
+                              color=discord.Colour.green())
+
         embed.add_field(name="個人設定", value=description, inline=False)
 
         # サーバーでの実行かつ管理者なら
@@ -336,10 +344,10 @@ class Settings(commands.Cog):
                 guild_result = ["未設定", "未設定"]
 
             guild_description = f"言語: **{guild_result[0]}**\n" \
-                        + f"タイムゾーン: **{guild_result[1]}**\n" \
-                        + "※個人設定がある場合はそちらが優先されます\n" \
-                        + "※コマンドの実行制限は`/setting command`で行えます"
-            
+                + f"タイムゾーン: **{guild_result[1]}**\n" \
+                + "※個人設定がある場合はそちらが優先されます\n" \
+                + "※コマンドの実行制限は`/setting command`で行えます"
+
             embed.add_field(name="サーバー設定", value=guild_description, inline=False)
 
         await ctx.followup.send(embed=embed, ephemeral=ephemeral)
@@ -353,7 +361,7 @@ class Settings(commands.Cog):
         try:
             await ctx.response.defer()
 
-            #ephemeral = ctx.extras.get('ephemeral', False)
+            # ephemeral = ctx.extras.get('ephemeral', False)
 
             # サーバーでの実行かつ管理者ではないなら
             if not (ctx.guild and ctx.user.guild_permissions.administrator):
@@ -398,10 +406,16 @@ class Settings(commands.Cog):
         async with self.dbm.pool.acquire() as conn:
             async with conn.transaction():
                 try:
-                    await conn.execute('''
-                                        INSERT INTO user_settings (user_id, language, timezone, ephemeral, spotify_time, spotify_total_time, game_time)
-                                        VALUES ($1, $2, $3, $4, $5, $6, $7)
-                                        ''', ctx.user.id, "", 0, False, False, 0, False)
+                    await conn.execute(
+                        """
+                        INSERT INTO user_settings (
+                            user_id, language, timezone,
+                            ephemeral, spotify_time, spotify_total_time,
+                            game_time)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        """,
+                        ctx.user.id, "", 0, False, False, 0, False
+                        )
 
                 except Exception as e:
                     await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
@@ -430,7 +444,7 @@ class Settings(commands.Cog):
         try:
             await ctx.response.defer()
 
-            ephemeral = ctx.extras.get('ephemeral', False)
+            # ephemeral = ctx.extras.get('ephemeral', False)
 
             # DBでuser_idが存在するか確認
             async with self.dbm.pool.acquire() as conn:
@@ -441,14 +455,24 @@ class Settings(commands.Cog):
                 async with self.dbm.pool.acquire() as conn:
                     async with conn.transaction():
                         try:
-                            await conn.execute('''
-                                            INSERT INTO user_settings (user_id, language, timezone, ephemeral, spotify_time, spotify_total_time, game_time)
-                                            VALUES ($1, $2, $3, $4, $5, $6, $7)
-                                            ''', ctx.user.id, "", 0, False, False, 0, False)
+                            await conn.execute(
+                                """
+                                INSERT INTO user_settings (
+                                    user_id, language, timezone,
+                                    ephemeral, spotify_time, spotify_total_time,
+                                    game_time
+                                    )
+                                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                                """,
+                                ctx.user.id, "", 0, False, False, 0, False
+                                )
 
                         except Exception as e:
                             await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                            await self.dbm.log_command(ctx.user.id, "setting toggle_feature", [feature.value, str(status)], ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                            await self.dbm.log_command(
+                                ctx.user.id, "setting toggle_feature", [feature.value, str(status)],
+                                ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})"
+                                )
                             return
 
                 result = [False, False]
@@ -481,15 +505,22 @@ class Settings(commands.Cog):
 
                     except Exception as e:
                         await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                        await self.dbm.log_command(ctx.user.id, "setting toggle_feature", [feature.value, str(status)], ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                        await self.dbm.log_command(
+                            ctx.user.id, "setting toggle_feature", [feature.value, str(status)],
+                            ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})"
+                            )
                         return
 
             embed = discord.Embed(title=":white_check_mark: 設定完了",
-                                description=f"【{feature.name}】を**{'有効' if setting else '無効'}**に設定しました",
-                                color=discord.Colour.green())
+                                  description=f"【{feature.name}】を**{'有効' if setting else '無効'}**に設定しました",
+                                  color=discord.Colour.green())
 
             await ctx.followup.send(embed=embed, ephemeral=setting)
-            await self.dbm.log_command(ctx.user.id, "setting toggle_feature", [feature.value, str(status)], ctx.guild.id if ctx.guild else None, result="Success")
+            await self.dbm.log_command(
+                ctx.user.id, "setting toggle_feature", [feature.value, str(status)],
+                ctx.guild.id if ctx.guild else None, result="Success"
+                )
+
         except Exception as e:
             import traceback
             print(traceback.format_exc())

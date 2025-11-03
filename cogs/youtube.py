@@ -15,14 +15,14 @@ from modules.decorators import ephemeral_check, restrict_check
 
 
 class YouTube(commands.Cog):
+
     def __init__(self, bot):
         self.bot = bot
-
 
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -77,9 +77,11 @@ class YouTube(commands.Cog):
 
         except Exception:
             youtube_dl_opts = {'format': 'best', 'max-downloads': '1', "cookiefile": "data/cookie.txt",
-                'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                }}
+                               'http_headers': {
+                                   'User-Agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                                                  'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+                                                  }
+                               }
             opt = "なし"
 
         try:

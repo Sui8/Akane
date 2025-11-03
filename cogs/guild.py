@@ -20,7 +20,7 @@ class Guild(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -55,17 +55,20 @@ class Guild(commands.Cog):
             return
 
         try:
+            embed = discord.Embed(title="サーバー情報",
+                                  description="",
+                                  color=discord.Colour.dark_blue())
             icon = ctx.guild.icon.replace(static_format='png')
             created_at = ctx.guild.created_at.timestamp()
-            others = f"ロール数: {len(ctx.guild.roles)}" \
-                   + f"絵文字数: {len(ctx.guild.emojis)}" \
-                   + f"スタンプ数: {len(ctx.guild.stickers)}" \
-                   + f"サーバーブースト: {ctx.guild.premium_subscription_count} (レベル{ctx.guild.premium_tier})" \
-                   + f"認証レベル: {ctx.guild.verification_level}" \
-                   + f"AFK: {ctx.guild.afk_timeout}秒"
+            others = f"ロール数: {len(ctx.guild.roles)}\n" \
+                + f"絵文字数: {len(ctx.guild.emojis)}\n" \
+                + f"スタンプ数: {len(ctx.guild.stickers)}\n" \
+                + f"サーバーブースト: {ctx.guild.premium_subscription_count} (レベル{ctx.guild.premium_tier})\n" \
+                + f"認証レベル: {ctx.guild.verification_level}\n" \
+                + f"AFK: {ctx.guild.afk_timeout}秒"
 
             embed.add_field(name="サーバーID", value=ctx.guild.id, inline=True)
-            embed.add_field(name="作成日時", value=f"<t:{created_at}:f>", inline=True)
+            embed.add_field(name="作成日時", value=f"<t:{int(created_at)}:f>", inline=True)
             embed.add_field(name="所有者", value=ctx.guild.owner.mention, inline=True)
             embed.add_field(name="人数", value=f"{ctx.guild.member_count}人", inline=True)  # Memberインテント必須
             embed.add_field(name="チャンネル数", value=f"テキスト: {len(ctx.guild.text_channels)}\nボイス: {len(ctx.guild.voice_channels)}", inline=True)
@@ -77,9 +80,7 @@ class Guild(commands.Cog):
             return
 
         else:
-            embed = discord.Embed(title="サーバー情報",
-                                  description="",
-                                  color=discord.Colour.dark_blue())
+
             embed.set_thumbnail(url=icon)
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
             await self.dbm.log_command(ctx.user.id, "server", None, ctx.guild.id if ctx.guild else None, result="Success")

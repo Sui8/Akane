@@ -23,7 +23,7 @@ class Fun(commands.Cog):
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -45,7 +45,7 @@ class Fun(commands.Cog):
     async def cat(self, ctx: discord.Interaction):
         await ctx.response.defer()
         ephemeral = ctx.extras.get('ephemeral', False)
-        
+
         if ctx.extras.get('restricted', False):
             await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)
             return
@@ -106,7 +106,7 @@ class Fun(commands.Cog):
 
         else:
             word_list = [":one:", ":two:", ":three:",
-                            ":four:", ":five:", ":six:"]
+                         ":four:", ":five:", ":six:"]
             word_list = word_list[:(maximum - 1)]
             dices = [random.choice(word_list) for i in range(pcs)]
 
@@ -139,7 +139,8 @@ class Fun(commands.Cog):
                 kuji_results[i] = f"**{j}**"
 
             await ctx.followup.send(f"今日の運勢は... {', '.join(map(str, kuji_results))}！"
-                                            f"（{pcs}連おみくじ総合運勢: **{omikuji_list[(points // pcs) - 1]}）**", ephemeral=ephemeral)
+                                    f"（{pcs}連おみくじ総合運勢: **{omikuji_list[(points // pcs) - 1]}）**",
+                                    ephemeral=ephemeral)
 
         else:
             await ctx.followup.send(f"今日の運勢は... **{random.choice(omikuji_list)}**！", ephemeral=ephemeral)
@@ -152,7 +153,7 @@ class Fun(commands.Cog):
     @restrict_check
     async def janken(self, ctx: discord.Interaction):
         await ctx.response.defer()
-        #ephemeral = ctx.extras.get('ephemeral', False)
+        # ephemeral = ctx.extras.get('ephemeral', False)
 
         if ctx.extras.get('restricted', False):
             await send_error(ctx, None, "このコマンドはサーバー管理者によって実行が制限されています。", None, is_followup=True)

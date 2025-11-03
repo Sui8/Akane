@@ -13,9 +13,7 @@ import aiohttp  # aiohttp
 from dotenv import load_dotenv  # python-dotenv
 from google import genai  # google-generativeai
 from google.genai import types
-from google.genai.types import Content
 import simplejson as json  # simplejson
-import asyncpg  # asyncpg
 
 # 自作モジュール
 from modules.utils import send_error
@@ -73,11 +71,11 @@ AI_STATUS = ["active", "banned"]
 
 # Prompts
 CHARACTERS = {
-    "akane": ["琴葉茜", "akane.txt"], "aoi": ["琴葉葵", "aoi.txt"], "jinrou": ["人狼（β版）", "jinrou.txt"], 
+    "akane": ["琴葉茜", "akane.txt"], "aoi": ["琴葉葵", "aoi.txt"], "jinrou": ["人狼（β版）", "jinrou.txt"],
     "zundamon": ["ずんだもん", "zundamon.txt"], "anagosan": ["アナゴさん", "anagosan.txt"],
-    "hiroyuki": ["ひろゆき", "hiroyuki.txt"], "koishi": ["古明地こいし", "koishi.txt"], 
+    "hiroyuki": ["ひろゆき", "hiroyuki.txt"], "koishi": ["古明地こいし", "koishi.txt"],
     "bocchi": ["後藤ひとり", "bocchi.txt"], "vegeta": ["ベジータ", "vegeta.txt"],
-    "reimu": ["博麗霊夢", "reimu.txt"], "marisa": ["霧雨魔理沙", "marisa.txt"], 
+    "reimu": ["博麗霊夢", "reimu.txt"], "marisa": ["霧雨魔理沙", "marisa.txt"],
     "yaju": ["野獣先輩", "yaju.txt"], "kurisu": ["牧瀬紅莉栖", "kurisu.txt"],
     "satoshi": ["サトシ", "satoshi.txt"], "aris": ["天童アリス", "aris.txt"]
 }
@@ -124,7 +122,7 @@ def help_embed(mode):
     embed.add_field(name="注意事項",
                     value="・AIと会話しない場合は、メッセージの先頭に`::`または`//`を付けてください。\n"
                           "・会話履歴はAkaneと各ユーザー間で保存されます (直近300件まで)。他のユーザーとの会話に割り込むことはできません。\n"
-                         f"・会話に不調を感じる場合は、`/ai clear_log`と送信し、会話履歴をリセットしてください。\n"
+                          "・会話に不調を感じる場合は、`/ai clear_log`と送信し、会話履歴をリセットしてください。\n"
                           "・現在は一部のサーバーオーナー向けに機能を開放しています。\n"
                           "・Discord規約や公序良俗に反する発言を行ったり、Akaneにそのような発言を促す行為を禁止します。",
                     inline=False)
@@ -183,8 +181,7 @@ def gemini(text, flag, attachment, chara, ai_model):
                         response_mime_type="text/plain",
                     )
                 )
-                
-                
+
                 # レスの取り出し
                 parts = response.candidates[0].content.parts
                 text = next((part.text for part in parts if part.text), None)
@@ -208,7 +205,7 @@ def gemini(text, flag, attachment, chara, ai_model):
                 formated_response = formated_response.splitlines()
 
                 formated_response = [item for item in formated_response if item.strip()]
-                
+
                 if len(formated_response) <= 15:
                     iofile = None
                     final_response = "\n".join(formated_response)
@@ -235,11 +232,11 @@ def gemini(text, flag, attachment, chara, ai_model):
         # AIモデル削除に対応した設定
         if ai_model in MODELS:
             use_model = ai_model
-        
+
         # 今の設定では別にいらんけど一応
         elif ai_model == "default":
             use_model = DEFAULT_MODEL
-        
+
         else:
             use_model = DEFAULT_MODEL
 
@@ -249,12 +246,12 @@ def gemini(text, flag, attachment, chara, ai_model):
 
         chat = client.chats.create(model=use_model,
                                    config=types.GenerateContentConfig(
-                                   safety_settings=safety_settings,
-                                   temperature=0.9,
-                                   top_p=1,
-                                   top_k=5,
-                                   max_output_tokens=512,
-                                   system_instruction=prompt),
+                                       safety_settings=safety_settings,
+                                       temperature=0.9,
+                                       top_p=1,
+                                       top_k=5,
+                                       max_output_tokens=512,
+                                       system_instruction=prompt),
                                    history=attachment)
 
         # Geminiにメッセージを投げて返答を待つ。エラーはエラーとして返す。
@@ -275,7 +272,7 @@ def gemini(text, flag, attachment, chara, ai_model):
             formated_response = formated_response.splitlines()
 
             formated_response = [item for item in formated_response if item.strip()]
-            
+
             if len(formated_response) <= 15:
                 iofile = None
                 final_response = "\n".join(formated_response)
@@ -296,9 +293,9 @@ def gemini(text, flag, attachment, chara, ai_model):
                 response = client.models.generate_content(
                     model=ai_model,
                     contents=[
-                    text,
-                    *attachment,
-                    ],
+                        text,
+                        *attachment,
+                        ],
                     config=types.GenerateContentConfig(
                         temperature=1,
                         top_p=0.95,
@@ -309,8 +306,7 @@ def gemini(text, flag, attachment, chara, ai_model):
                         response_mime_type="text/plain",
                     )
                 )
-                
-                
+
                 # レスの取り出し
                 parts = response.candidates[0].content.parts
                 text = next((part.text for part in parts if part.text), None)
@@ -334,7 +330,7 @@ def gemini(text, flag, attachment, chara, ai_model):
                 formated_response = formated_response.splitlines()
 
                 formated_response = [item for item in formated_response if item.strip()]
-                
+
                 if len(formated_response) <= 15:
                     iofile = None
                     final_response = "\n".join(formated_response)
@@ -361,11 +357,11 @@ def gemini(text, flag, attachment, chara, ai_model):
         # AIモデル削除に対応した設定
         if ai_model in MODELS:
             use_model = ai_model
-        
+
         # 今の設定では別にいらんけど一応
         elif ai_model == "default":
             use_model = DEFAULT_MODEL
-        
+
         else:
             use_model = DEFAULT_MODEL
 
@@ -400,7 +396,7 @@ def gemini(text, flag, attachment, chara, ai_model):
             formated_response = formated_response.splitlines()
 
             formated_response = [item for item in formated_response if item.strip()]
-            
+
             if len(formated_response) <= 15:
                 iofile = None
                 final_response = "\n".join(formated_response)
@@ -420,7 +416,6 @@ class SelectView(View):
         super().__init__(timeout=timeout)
         self.main = main_instance
         self.author = author
-
 
     @discord.ui.select(
         cls=Select,
@@ -509,12 +504,30 @@ class ModelSelectView(View):
         placeholder="AIモデルを選択",
         disabled=False,
         options=[
-            discord.SelectOption(label="Gemini 2.5 Flash-Lite (Preview 06-17)", value="default", description="高性能、やや軽量 [1.5クレジット]"),
-            discord.SelectOption(label="Gemini 2.5 Pro", value="gemini-2.5-pro", description="推論、数学、コーディング向け (Basic以上限定) [15クレジット]"),
-            discord.SelectOption(label="Gemini 2.5 Flash", value="gemini-2.5-flash", description="高性能かつスピーディー (Basic以上限定) [6クレジット]"),
-            discord.SelectOption(label="Gemini 2.0 Flash", value="gemini-2.0-flash", description="通常の会話向け (Basic以上限定) [7.5クレジット]"),
-            discord.SelectOption(label="Gemini 2.0 Flash (Preview 画像生成)", value="gemini-2.0-flash-preview-image-generation", description="画像生成、高レート制限 (Basic以上限定) [15クレジット]"),
-            discord.SelectOption(label="Gemini 2.0 Flash-Lite", value="gemini-2.0-flash-lite", description="やや軽量 [7.5クレジット]")
+            discord.SelectOption(
+                label="Gemini 2.5 Flash-Lite (Preview 06-17)",
+                value="default",
+                description="高性能、やや軽量 [1.5クレジット]"),
+            discord.SelectOption(
+                label="Gemini 2.5 Pro",
+                value="gemini-2.5-pro",
+                description="推論、数学、コーディング向け (Basic以上限定) [15クレジット]"),
+            discord.SelectOption(
+                label="Gemini 2.5 Flash",
+                value="gemini-2.5-flash",
+                description="高性能かつスピーディー (Basic以上限定) [6クレジット]"),
+            discord.SelectOption(
+                label="Gemini 2.0 Flash",
+                value="gemini-2.0-flash",
+                description="通常の会話向け (Basic以上限定) [7.5クレジット]"),
+            discord.SelectOption(
+                label="Gemini 2.0 Flash (Preview 画像生成)",
+                value="gemini-2.0-flash-preview-image-generation",
+                description="画像生成 高レート制限 (Basic以上限定) [15クレジット]"),
+            discord.SelectOption(
+                label="Gemini 2.0 Flash-Lite",
+                value="gemini-2.0-flash-lite",
+                description="やや軽量 [7.5クレジット]")
         ],
     )
     async def selectMenu(self, ctx: discord.Interaction, select: Select):
@@ -531,18 +544,18 @@ class ModelSelectView(View):
             async with self.main.dbm.pool.acquire() as conn:
                 role = await conn.fetchval("""
                         SELECT role
-                        FROM ai_talk_data 
+                        FROM ai_talk_data
                         WHERE user_id = $1
                     """, ctx.user.id)
-                
+
                 # 権限不足
-                if not role in model_permission:
+                if role not in model_permission:
                     embed = discord.Embed(title="エラー",
                                           description="このモデルを使用する権限がありません。\n別のモデルをお試し下さい。\n※以下のボタンは5分でタイムアウトします",
                                           color=discord.Colour.red())
                     await ctx.response.edit_message(embed=embed, view=ModelSelectView(self.main, author=ctx.user))
                     return
-                
+
                 async with conn.transaction():
                     try:
                         await conn.execute('''
@@ -577,6 +590,7 @@ class ModelSelectView(View):
 
 ##################################################
 
+
 ''' コマンド '''
 
 
@@ -584,11 +598,10 @@ class Akane_ai(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
     # Cog読み込み時
     @commands.Cog.listener()
     async def on_ready(self):
-        ##### DB読み込み＆チェック #####
+        # ---- DB読み込み＆チェック ----
         self.dbm = self.bot.get_cog("DatabaseManager")
 
         if not self.dbm:
@@ -638,7 +651,7 @@ class Akane_ai(commands.Cog):
         async with self.dbm.pool.acquire() as conn:
             data = await conn.fetchrow("""
                 SELECT message_count, saving_count, chara, status, ai_model, role, credit
-                FROM ai_talk_data 
+                FROM ai_talk_data
                 WHERE user_id = $1
             """, ctx.user.id)
 
@@ -653,7 +666,7 @@ class Akane_ai(commands.Cog):
 
             elif status == "banned":
                 status_ = "利用禁止 (BAN)"
-            
+
             else:
                 status_ = "利用不可"
 
@@ -692,7 +705,7 @@ class Akane_ai(commands.Cog):
 
         else:
             message_count = 0
-            saving_count = {"all" :0, "akane": 0}
+            saving_count = {"all": 0, "akane": 0}
             present_chara = "未設定"
             plan = "なし"
             status_ = "未利用"
@@ -712,8 +725,8 @@ class Akane_ai(commands.Cog):
 
         await self.dbm.log_command(ctx.user.id, "ai my_stats", None, ctx.guild.id if ctx.guild else None, result="Success")
 
-
     # clear_log
+
     @group.command(name="clear_log", description="現在のキャラクターとの会話履歴を消去する")
     @ephemeral_check
     @restrict_check
@@ -728,7 +741,7 @@ class Akane_ai(commands.Cog):
         async with self.dbm.pool.acquire() as conn:
             result = await conn.fetch("""
                 SELECT saving_count, chara
-                FROM ai_talk_data 
+                FROM ai_talk_data
                 WHERE user_id = $1
             """, ctx.user.id)
 
@@ -755,7 +768,7 @@ class Akane_ai(commands.Cog):
                         await self.dbm.log_command(ctx.user.id, "ai clear_log", None, ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
                         return
 
-            embed = discord.Embed(title=f":white_check_mark: 完了",
+            embed = discord.Embed(title=":white_check_mark: 完了",
                                   description=f"`{CHARACTERS[chara][0]}`との会話履歴を消去しました",
                                   color=discord.Colour.red())
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
@@ -765,8 +778,8 @@ class Akane_ai(commands.Cog):
 
         await self.dbm.log_command(ctx.user.id, "ai clear_log", None, ctx.guild.id if ctx.guild else None, result="Success")
 
-
     # clear_log_all
+
     @group.command(name="clear_log_all", description="AIとの会話履歴を全て消去する")
     @ephemeral_check
     @restrict_check
@@ -781,7 +794,7 @@ class Akane_ai(commands.Cog):
         async with self.dbm.pool.acquire() as conn:
             saving_count, chara = await conn.fetchval("""
                 SELECT saving_count, chara
-                FROM ai_talk_data 
+                FROM ai_talk_data
                 WHERE user_id = $1
             """, ctx.user.id)
 
@@ -799,11 +812,19 @@ class Akane_ai(commands.Cog):
                         ''', json.dumps(saving_count), ctx.user.id)
 
                     except Exception as e:
-                        await send_error(ctx, "0x00003", None, self.bot.SUPPORT_SERVER, is_followup=True)
-                        await self.dbm.log_command(ctx.user.id, "ai clear_log_all", None, ctx.guild.id if ctx.guild else None, result=f"0x00003 ({e})")
+                        await send_error(ctx,
+                                         "0x00003",
+                                         None,
+                                         self.bot.SUPPORT_SERVER,
+                                         is_followup=True)
+                        await self.dbm.log_command(ctx.user.id,
+                                                   "ai clear_log_all",
+                                                   None,
+                                                   ctx.guild.id if ctx.guild else None,
+                                                   result=f"0x00003 ({e})")
                         return
 
-            embed = discord.Embed(title=f":white_check_mark: 完了",
+            embed = discord.Embed(title=":white_check_mark: 完了",
                                   description=f"`{CHARACTERS[chara][0]}`との会話履歴を消去しました",
                                   color=discord.Colour.red())
             await ctx.followup.send(embed=embed, ephemeral=ephemeral)
@@ -813,8 +834,8 @@ class Akane_ai(commands.Cog):
 
         await self.dbm.log_command(ctx.user.id, "ai clear_log_all", None, ctx.guild.id if ctx.guild else None, result="Success")
 
-
     # chara
+
     @group.command(name="chara", description="AIのキャラクターを変更する")
     @ephemeral_check
     @restrict_check
@@ -842,10 +863,14 @@ class Akane_ai(commands.Cog):
             else:
                 present_chara = "キャラクターなし"
 
-            embed = discord.Embed(title=f"キャラクター変更",
-                                  description=f"現在のキャラクター: **{present_chara}**\n"
-                                               "※以下の変更ボタンは5分でタイムアウトします",
-                                  color=discord.Colour.red())
+            embed = discord.Embed(
+                title="キャラクター変更",
+                description=(
+                    f"現在のキャラクター: **{present_chara}**\n"
+                    "※以下の変更ボタンは5分でタイムアウトします"
+                    ),
+                color=discord.Colour.red()
+            )
             await ctx.followup.send(embed=embed, view=view, ephemeral=False)
 
         else:
@@ -881,10 +906,14 @@ class Akane_ai(commands.Cog):
             else:
                 present_model = DEFAULT_MODEL_NAME
 
-            embed = discord.Embed(title=f"AIモデル変更",
-                                  description=f"現在のモデル: **{present_model}**\n"
-                                               "※以下の変更ボタンは5分でタイムアウトします",
-                                  color=discord.Colour.red())
+            embed = discord.Embed(
+                title="AIモデル変更",
+                description=(
+                    f"現在のモデル: **{present_model}**\n"
+                    "※以下の変更ボタンは5分でタイムアウトします"
+                    ),
+                color=discord.Colour.red()
+                )
             await ctx.followup.send(embed=embed, view=view, ephemeral=False)
 
         else:
@@ -906,8 +935,8 @@ class Akane_ai(commands.Cog):
 
         async with self.dbm.pool.acquire() as conn:
             result = await conn.fetchrow("""
-                SELECT COUNT(*) AS total_users, 
-                    SUM(message_count) AS total_message_count 
+                SELECT COUNT(*) AS total_users,
+                    SUM(message_count) AS total_message_count
                 FROM ai_talk_data
             """)
 
@@ -929,14 +958,16 @@ class Akane_ai(commands.Cog):
 
             await self.dbm.log_command(ctx.user.id, "ai stats", None, ctx.guild.id if ctx.guild else None, result="0x00101")
 
+    # akane-ai
 
-    # #akane-ai
     @commands.Cog.listener("on_message")
     async def ai_talk(self, message):
         # Bot, 全体メンション, DM, 特定Prefix, コマンドは無視
-        if message.author.bot or message.mention_everyone or \
-            isinstance(message.channel, discord.DMChannel) or \
-            message.content.startswith("::") or message.content.startswith("//"):
+        if (message.author.bot
+                or message.mention_everyone
+                or isinstance(message.channel, discord.DMChannel)
+                or message.content.startswith("::")
+                or message.content.startswith("//")):
             return
 
         # メイン処理
@@ -962,19 +993,23 @@ class Akane_ai(commands.Cog):
                                         # とりあえず最大5枚まで
                                         if len(image_parts) >= 5:
                                             break
-                    
+
                     # 画像があるとき
                     if image_parts:
                         # キャラクター設定取得
                         async with self.dbm.pool.acquire() as conn:
                             try:
-                                result = await conn.fetchrow("""
-                                            SELECT chara, saving_count, status, ai_model, role, credit, last_message FROM ai_talk_data WHERE user_id = $1
-                                        """, message.author.id)
+                                result = await conn.fetchrow(
+                                    """
+                                    SELECT
+                                        chara, saving_count, status, ai_model, role, credit, last_message
+                                    FROM ai_talk_data
+                                    WHERE user_id = $1
+                                    """,
+                                    message.author.id
+                                    )
 
-                            except Exception as e:
-                                import traceback
-                                print(traceback.format_exc())
+                            except Exception:
                                 result = ["akane", json.loads({"all": 0, "akane": 0}), DEFAULT_MODEL, "free", 0, datetime.datetime.now()]
 
                         # 会話歴あり
@@ -1008,7 +1043,7 @@ class Akane_ai(commands.Cog):
                                     pass
 
                                 return
-                            
+
                             if ai_model == "default":
                                 ai_model = DEFAULT_MODEL
 
@@ -1021,14 +1056,23 @@ class Akane_ai(commands.Cog):
                             async with self.dbm.pool.acquire() as conn:
                                 async with conn.transaction():
                                     try:
-                                        await conn.execute(''' 
-                                            INSERT INTO ai_talk_data (user_id, message_count, saving_count, chara, status, ai_model, role, credit, last_message)
+                                        await conn.execute(
+                                            '''
+                                            INSERT INTO ai_talk_data (
+                                                user_id, message_count, saving_count,
+                                                chara, status, ai_model,
+                                                role, credit, last_message
+                                                )
                                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active", "default", "free", max(AI_ROLES["free"] - credit_per["default"][1], 0))
+                                            ''',
+                                            message.author.id, 1, json.dumps(saving_count), chara,
+                                            "active", "default", "free",
+                                            max(AI_ROLES["free"] - credit_per["default"][1], 0))
 
                                     except Exception:
-                                        await message.reply(":x: システムエラーが発生しました。時間を空けてお試しください。",
-                                                mention_author=False)
+                                        await message.reply(
+                                            ":x: システムエラーが発生しました。時間を空けてお試しください。",
+                                            mention_author=False)
                                         return
 
                             embed = help_embed(0)
@@ -1057,9 +1101,7 @@ class Akane_ai(commands.Cog):
                                     SELECT chara, saving_count, status, ai_model, role, credit, last_message FROM ai_talk_data WHERE user_id = $1
                                 """, message.author.id)
 
-                            except Exception as e:
-                                import traceback
-                                print(traceback.format_exc())
+                            except Exception:
                                 result = ["akane", json.loads({"all": 0, "akane": 0}), DEFAULT_MODEL, "free", 0, datetime.datetime.now()]
 
                         # 会話歴あり
@@ -1094,7 +1136,7 @@ class Akane_ai(commands.Cog):
                                     pass
 
                                 return
-                            
+
                             if ai_model == "default":
                                 ai_model = DEFAULT_MODEL
 
@@ -1129,21 +1171,30 @@ class Akane_ai(commands.Cog):
                             async with self.dbm.pool.acquire() as conn:
                                 async with conn.transaction():
                                     try:
-                                        await conn.execute(''' 
-                                            INSERT INTO ai_talk_data (user_id, message_count, saving_count, chara, status, ai_model, role, credit, last_message)
+                                        await conn.execute(
+                                            '''
+                                            INSERT INTO ai_talk_data (
+                                                user_id, message_count, saving_count,
+                                                chara, status, ai_model,
+                                                role, credit, last_message
+                                                )
                                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
-                                        ''', message.author.id, 1, json.dumps(saving_count), chara, "active", "default", "free", max(AI_ROLES["free"] - credit_per["default"][1], 0))
+                                            ''',
+                                            message.author.id, 1, json.dumps(saving_count),
+                                            chara, "active", "default",
+                                            "free", max(AI_ROLES["free"] - credit_per["default"][1], 0))
 
                                     except Exception:
-                                        await message.reply(":x: システムエラーが発生しました。時間を空けてお試しください。",
-                                                mention_author=False)
+                                        await message.reply(
+                                            ":x: システムエラーが発生しました。時間を空けてお試しください。",
+                                            mention_author=False)
                                         return
 
                             embed = help_embed(0)
                             await message.reply(embed=embed)
 
                         content = message.content
-                        
+
                         # Geminiにデータ投げる
                         mode = "text"
                         response, iofile, file_type = gemini(content, 0, history, chara, ai_model)
@@ -1153,7 +1204,7 @@ class Akane_ai(commands.Cog):
                     # 履歴保存
                     if len(response[1]) > 0:
                         talk_data = [{"role": "user", "parts": [{"text": content}]}, {"role": "model", "parts": [{"text": response[1]}]}]
-                        
+
                         # (画像モードのときはスキップしておく)
                         if mode == "text":
                             # ログ保存数が300件未満か
@@ -1171,18 +1222,25 @@ class Akane_ai(commands.Cog):
                         async with self.dbm.pool.acquire() as conn:
                             async with conn.transaction():
                                 try:
-                                    await conn.execute(''' 
-                                        INSERT INTO ai_talk_logs (user_id, channel_id, guild_id, message, chara, timestamp)
+                                    await conn.execute(
+                                        '''
+                                        INSERT INTO ai_talk_logs (
+                                            user_id, channel_id, guild_id,
+                                            message, chara, timestamp
+                                            )
                                         VALUES ($1, $2, $3, $4, $5, $6)
-                                    ''', message.author.id, message.channel.id, message.guild.id, json.dumps(talk_data), chara, datetime.datetime.now())
+                                        ''',
+                                        message.author.id, message.channel.id, message.guild.id,
+                                        json.dumps(talk_data), chara, datetime.datetime.now())
+
                                     query = """
-                                                UPDATE ai_talk_data
-                                                SET 
-                                                    message_count = message_count + 1,
-                                                    saving_count = $2,
-                                                    credit = $3,
-                                                    last_message = now()
-                                                WHERE user_id = $1;
+                                            UPDATE ai_talk_data
+                                            SET
+                                                message_count = message_count + 1,
+                                                saving_count = $2,
+                                                credit = $3,
+                                                last_message = now()
+                                            WHERE user_id = $1;
                                             """
                                     await conn.execute(query, message.author.id, json.dumps(saving_count), credit)
 
@@ -1208,7 +1266,7 @@ class Akane_ai(commands.Cog):
                                     await message.reply(response + "\n\n※16行以上の返答は省略されました",
                                                         file=discord.File(fp=iofile, filename="response.txt"), mention_author=False)
                                     return
-                                
+
                                 elif file_type == "image":
                                     await message.reply(response,
                                                         file=discord.File(fp=iofile, filename="image.png"), mention_author=False)
@@ -1269,13 +1327,11 @@ class Akane_ai(commands.Cog):
                     await error_log.send(embed=embed)
                     return
 
-            except Exception as e:
-                import traceback
-                print(traceback.format_exc())
+            except Exception:
+                pass
 
         else:
             return
-        
 
     # ai_refill
 
@@ -1299,7 +1355,7 @@ class Akane_ai(commands.Cog):
                                            WHERE user_id = $2
                                            ''', new_credit, userid)
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 
@@ -1313,7 +1369,7 @@ class Akane_ai(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def ai_role(self, ctx: discord.Interaction, userid: int, role: str):
-        if not role in AI_ROLES.keys():
+        if role not in AI_ROLES.keys():
             await ctx.reply(":x: そのロールは存在しません", mention_author=False)
             return
 
@@ -1334,7 +1390,7 @@ class Akane_ai(commands.Cog):
                                            WHERE user_id = $3
                                            ''', new_credit, new_role, userid)
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 
@@ -1348,7 +1404,7 @@ class Akane_ai(commands.Cog):
     @commands.command()
     @commands.is_owner()
     async def ai_status(self, ctx: discord.Interaction, userid: int, status: str):
-        if not status in AI_STATUS:
+        if status not in AI_STATUS:
             await ctx.reply(":x: そのステータスは存在しません", mention_author=False)
             return
 
@@ -1368,7 +1424,7 @@ class Akane_ai(commands.Cog):
                                            WHERE user_id = $2
                                            ''', new_status, userid)
 
-                    except Exception as e:
+                    except Exception:
                         await ctx.reply(":x: データベースへの書き込みに失敗しました", mention_author=False)
                         return
 

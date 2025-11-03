@@ -1,8 +1,8 @@
 import functools
 
-import discord
 
 def ephemeral_check(func):
+
     @functools.wraps(func)
     async def wrapper(self, ctx, *args, **kwargs):
         # DBからユーザー設定を読み出し
@@ -25,6 +25,7 @@ def ephemeral_check(func):
 
 
 def restrict_check(func):
+
     """コマンドが制限されているかをチェックするデコレーター"""
     @functools.wraps(func)
     async def wrapper(self, ctx, *args, **kwargs):
@@ -65,10 +66,11 @@ def restrict_check(func):
             if parent_command and parent_command.name in restricted:
                 ctx.extras['restricted'] = True
                 return await func(self, ctx, *args, **kwargs)
-            
+
             ctx.extras['restricted'] = False
             return await func(self, ctx, *args, **kwargs)
-        except:
+
+        except Exception:
             import traceback
             print(traceback.format_exc())
 
