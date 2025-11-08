@@ -36,7 +36,7 @@ class BanListView(discord.ui.View):
         embed = discord.Embed(title="警告ワードリスト",
                               description=desc,
                               color=discord.Colour.yellow())
-        embed.set_footer(text=f"ページ {self.page} / {pages} (全 {total:,} ワード) ｜＊同じ警告ワードの検知は10秒間行われません")
+        embed.set_footer(text=f"ページ {self.page} / {pages} (全 {total:,} ワード)")
         return embed
 
     async def update(self):
@@ -235,8 +235,8 @@ class BanWord(commands.Cog):
         key = (gid, found)
 
         # こっちが連投するの防止 (10秒クールダウン)
-        if key in self.recent_responses and now - self.recent_responses[key] < 10:
-            return
+        # if key in self.recent_responses and now - self.recent_responses[key] < 10:
+        #     return
 
         self.recent_responses[key] = now
 
@@ -397,7 +397,7 @@ class BanWord(commands.Cog):
             embed = discord.Embed(title="警告ワードリスト",
                                   description="登録されているワードはありません",
                                   color=discord.Colour.yellow())
-            embed.set_footer(text="＊同じ警告ワードの検知は10秒間行われません")
+            # embed.set_footer(text="＊同じ警告ワードの検知は10秒間行われません")
             return await ctx.followup.send(embed=embed, ephemeral=False)
 
         view = BanListView(self, ctx, words, page=1)
