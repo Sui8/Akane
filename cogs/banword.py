@@ -257,7 +257,9 @@ class BanWord(commands.Cog):
 
     # add
     @group.command(name="add", description="警告ワードを追加")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
+    @app_commands.describe(word="追加するワード")
     @ephemeral_check
     async def add(self, ctx: discord.Interaction, word: app_commands.Range[str, 1, 200]):
         await ctx.response.defer()
@@ -309,7 +311,9 @@ class BanWord(commands.Cog):
 
     # remove
     @group.command(name="remove", description="警告ワードを削除")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
+    @app_commands.describe(word="削除するワード")
     @ephemeral_check
     async def remove(self, ctx: discord.Interaction, word: app_commands.Range[str, 1, 200]):
         await ctx.response.defer()
@@ -351,7 +355,8 @@ class BanWord(commands.Cog):
 
     # clear
     @group.command(name="clear", description="警告ワードをすべて削除")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @ephemeral_check
     async def clear(self, ctx: discord.Interaction):
         await ctx.response.defer()
@@ -386,7 +391,8 @@ class BanWord(commands.Cog):
 
     # list
     @group.command(name="list", description="警告ワードリストを表示")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     async def list(self, ctx: discord.Interaction):
         await ctx.response.defer()
 
@@ -405,7 +411,8 @@ class BanWord(commands.Cog):
 
     # message
     @group.command(name="message", description="警告ワードへの返信文を設定")
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     async def message(self, ctx: discord.Interaction):
         await ctx.response.send_modal(BanReplyModal(self, ctx.guild_id))
 
