@@ -61,7 +61,8 @@ EXTENSIONS = [
     'cogs.jppost',
     'cogs.gamble',
     'cogs.ranking',
-    'cogs.pokepoke'
+    'cogs.pokepoke',
+    'cogs.banword'
 ]
 
 ##################################################
