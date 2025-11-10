@@ -255,6 +255,52 @@ class BanWord(commands.Cog):
 
         await message.reply(embed=embed, mention_author=False)
 
+    # メッセージの更新を検知
+    @commands.Cog.listener()
+    async def on_message_edit(self, before, after):
+
+        if after.author.bot or not after.guild:
+            return
+        
+        gid = after.guild.id
+
+        if gid not in self.cache:
+            return
+
+        found = None
+
+        for i in self.cache[gid]:
+            if str(i) in str(after.content):  # 上手く検知されにくい
+                found = i
+                break
+
+        if not found:
+            return
+
+        now = time.time()
+        key = (gid, found)
+
+        # こっちが連投するの防止 (10秒クールダウン)
+        # if key in self.recent_responses and now - self.recent_responses[key] < 10:
+        #     return
+
+        self.recent_responses[key] = now
+
+        # reply設定
+        data = self.reply_cache.get(gid)
+
+        if data:
+            embed = discord.Embed(title=data["title"], description=data["body"], color=0xff0000)
+
+        else:
+            embed = discord.Embed(
+                title=":warning: サーバー管理者より警告",
+                description="このメッセージには不適切なワードが含まれています。",
+                color=0xff0000
+            )
+
+        await after.reply(embed=embed, mention_author=False)
+
     # add
     @group.command(name="add", description="警告ワードを追加")
     @app_commands.checks.has_permissions(administrator=True)
