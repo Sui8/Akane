@@ -48,15 +48,17 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "A4a": "[A4a] 未知なる水域", "A4b": "[A4b] ハイクラスパックex",
                       "B11": "[B1] メガライジング メガギャラドス", "B12": "[B1] メガライジング メガバシャーモ", "B13": "[B1] メガライジング メガチルタリス",
                       "B1": "[B1] メガライジング",
+                      "B1a": "[B1a] 紅蓮ブレイズ",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
                       "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10", "A4p": "PROMO-A Vol.11", "A4ap": "PROMO-A Vol.12",
                       "A4bp": "PROMO-A Vol.13",
+                      "B1p": "PROMO-B Vol.1",
                       "ATS": "ショップ", "APS": "プレミアムショップ", "ACP": "キャンペーン", "AMS": "ミッション", "AGC": "ゲットチャレンジ",
                       "BTS": "ショップ", "BPS": "プレミアムショップ", "BCP": "キャンペーン", "BMS": "ミッション", "BGC": "ゲットチャレンジ"}
-major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32", "A41", "A42"]
+major_packs = ["A11", "A12", "A13", "A21", "A22", "A31", "A32", "A41", "A42", "B11", "B12", "B13"]
 promo_a_packs = ["A1p", "A1p2", "A1ap", "A2p", "A2ap", "A2bp", "A3p", "A3ap", "A3bp", "A4p", "A4ap", "A4bp", "ATS", "APS", "ACP", "AMS", "AGC"]
-promo_b_packs = ["BTS", "BPS", "BCP", "BMS", "BGC"]
+promo_b_packs = ["B1p", "BTS", "BPS", "BCP", "BMS", "BGC"]
 
 ##################################################
 
@@ -149,7 +151,7 @@ async def pick_cards(self, pack_id, pcs, type_select):
                     else:
                         pack_type = "normal"
 
-                elif pack_id in ["B11", "B12", "B13"]:
+                elif pack_id in ["B11", "B12", "B13", "B1a"]:
                     if possibility < 0.050:
                         pack_type = "god"
 
@@ -248,6 +250,7 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[B1a] 紅蓮ブレイズ", value="B1a"),
         discord.app_commands.Choice(name="[B1] メガライジング メガギャラドス", value="B11"),
         discord.app_commands.Choice(name="[B1] メガライジング メガバシャーモ", value="B12"),
         discord.app_commands.Choice(name="[B1] メガライジング メガチルタリス", value="B13"),
