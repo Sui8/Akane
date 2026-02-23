@@ -49,6 +49,7 @@ get_source_mapping = {"A11": "[A1] 最強の遺伝子 リザードン", "A12": "
                       "B11": "[B1] メガライジング メガギャラドス", "B12": "[B1] メガライジング メガバシャーモ", "B13": "[B1] メガライジング メガチルタリス",
                       "B1": "[B1] メガライジング",
                       "B1a": "[B1a] 紅蓮ブレイズ",
+                      "B2": "[B2] 夢幻パレード",
                       "A1p": "PROMO-A Vol.1", "A1p2": "PROMO-A Vol.2", "A1ap": "PROMO-A Vol.3", "A2p": "PROMO-A Vol.4",
                       "A2ap": "PROMO-A Vol.5", "A2bp": "PROMO-A Vol.6", "A3p": "PROMO-A Vol.7", "A3p2": "PROMO-A Vol.8",
                       "A3ap": "PROMO-A Vol.9", "A3bp": "PROMO-A Vol.10", "A4p": "PROMO-A Vol.11", "A4ap": "PROMO-A Vol.12",
@@ -250,6 +251,7 @@ class PokePoke(commands.Cog):
     @app_commands.checks.cooldown(2, 3)
     @app_commands.describe(pack="開封するパック")
     @app_commands.choices(pack=[
+        discord.app_commands.Choice(name="[B2] 夢幻パレード", value="B2"),
         discord.app_commands.Choice(name="[B1a] 紅蓮ブレイズ", value="B1a"),
         discord.app_commands.Choice(name="[B1] メガライジング メガギャラドス", value="B11"),
         discord.app_commands.Choice(name="[B1] メガライジング メガバシャーモ", value="B12"),
