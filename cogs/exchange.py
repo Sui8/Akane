@@ -19,8 +19,7 @@ from modules.decorators import ephemeral_check, restrict_check
 
 ''' 定数群 '''
 
-
-SHORTIO_KEY = os.getenv("SHORTIO_KEY")  # short.io
+URL = "https://api.frankfurter.dev/v1/latest"
 
 ##################################################
 
@@ -40,10 +39,8 @@ class Exchange(commands.Cog):
     # 12時間ごとにデータを更新
     @tasks.loop(hours=12)
     async def update_cache(self):
-        url = "https://api.frankfurter.app/v1/latest"
-
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
+            async with session.get(URL) as resp:
                 if resp.status == 200:
                     data = await resp.json()
 
@@ -113,8 +110,7 @@ class Exchange(commands.Cog):
 
         embed = discord.Embed(title="通貨換算", color=discord.Color.blue())
         embed.add_field(name="Result", value=f"**{amount} {from_cur}** → **{converted:.2f} {to_cur}**", inline=False)
-        embed.add_field(name="Rate", value=f"1 {from_cur} = {rate:.4f} {to_cur}", inline=False)
-        embed.set_footer(text="Powered by Frankfurter API")
+        embed.set_footer(text=f"Rate: 1 {from_cur} = {rate:.4f} {to_cur}")
         
         await ctx.followup.send(embed, ephemeral=False)
         await self.dbm.log_command(ctx.user.id, "fx", [amount, from_cur, to_cur], ctx.guild.id if ctx.guild else None, result="Success")
