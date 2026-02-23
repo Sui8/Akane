@@ -110,7 +110,7 @@ class Exchange(commands.Cog):
 
         # Embed作成
         embed = discord.Embed(title="通貨換算", color=0x00ff00)
-        embed.add_field(name="", value=f"**{amount} {from_cur}** →**{converted:.2f} {to_cur}**", inline=False)
+        embed.add_field(name="", value=f"**{amount} {from_cur}** → **{converted:.2f} {to_cur}**", inline=False)
         
         # フッターにレートとAPI側の日付を入れる
         last_date = self.cache["date"]
