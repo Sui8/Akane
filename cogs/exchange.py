@@ -44,11 +44,9 @@ class Exchange(commands.Cog):
                 if resp.status == 200:
                     data = await resp.json()
 
-                    # 換算レートをcacheに保存
-                    self.cache = data.get("rates", {})
-
-                    # ベース通貨(EUR)
-                    self.cache["EUR"] = 1.0
+                    self.cache["rates"] = data.get("rates", {})
+                    self.cache["rates"]["EUR"] = 1.0 # ベース通貨
+                    self.cache["date"] = data.get("date", "Unknown")
 
                     # print("exchange: Currency cache updated.")
 
@@ -72,11 +70,11 @@ class Exchange(commands.Cog):
 
     # 通貨コードの予測変換用
     async def currency_autocomplete(self, ctx: discord.Interaction, current: str):
-        currencies = list(self.cache.keys())
+        currencies = list(self.cache["rates"].keys())
         return [
             app_commands.Choice(name=c, value=c)
             for c in currencies if current.upper() in c
-        ][:25] # Discordの制限で最大25個
+        ][:25] # Discordの制限で25個まで
 
     # fx
 
@@ -90,29 +88,35 @@ class Exchange(commands.Cog):
 
         await ctx.response.defer()
         
-        # キャッシュなし
-        if not self.cache:
+        rates = self.cache["rates"]
+
+        # cacheなし
+        if not rates:
             await send_error(ctx, None, "通貨換算データを取得できません。\nしばらく時間をおいてからお試しください。", None, is_followup=True)
             await self.dbm.log_command(ctx.user.id, "fx", [amount, from_cur, to_cur], ctx.guild.id if ctx.guild else None, result="Failed (Exception)")
             return
 
         from_cur, to_cur = from_cur.upper(), to_cur.upper()
-        
-        if from_cur not in self.cache or to_cur not in self.cache:
+
+        if from_cur not in rates or to_cur not in rates:
             await send_error(ctx, None, "未対応の通貨です", None, is_followup=True)
             await self.dbm.log_command(ctx.user.id, "fx", [amount, from_cur, to_cur], ctx.guild.id if ctx.guild else None, result="Failed")
             return
 
-        # EURを介して計算 (金額 / 元通貨のEURレート) * 先通貨のEURレート
-        base_amount = amount / self.cache[from_cur]
-        converted = base_amount * self.cache[to_cur]
-        rate = self.cache[to_cur] / self.cache[from_cur]
+        # EURベースで計算
+        base_val = amount / rates[from_cur]
+        converted = base_val * rates[to_cur]
+        rate = rates[to_cur] / rates[from_cur]
 
-        embed = discord.Embed(title="通貨換算", color=discord.Color.blue())
-        embed.add_field(name="Result", value=f"**{amount} {from_cur}** → **{converted:.2f} {to_cur}**", inline=False)
-        embed.set_footer(text=f"Rate: 1 {from_cur} = {rate:.4f} {to_cur}")
+        # Embed作成
+        embed = discord.Embed(title="通貨換算", color=0x00ff00)
+        embed.add_field(name="", value=f"**{amount} {from_cur}** →**{converted:.2f} {to_cur}**", inline=False)
         
-        await ctx.followup.send(embed, ephemeral=False)
+        # フッターにレートとAPI側の日付を入れる
+        last_date = self.cache["date"]
+        embed.set_footer(text=f"レート: 1 {from_cur} = {rate:.4f} {to_cur} | データ更新日: {last_date}")
+        
+        await ctx.followup.send(embed=embed, ephemeral=False)
         await self.dbm.log_command(ctx.user.id, "fx", [amount, from_cur, to_cur], ctx.guild.id if ctx.guild else None, result="Success")
 
 
