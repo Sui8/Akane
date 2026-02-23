@@ -62,7 +62,8 @@ EXTENSIONS = [
     'cogs.gamble',
     'cogs.ranking',
     'cogs.pokepoke',
-    'cogs.banword'
+    'cogs.banword',
+    'cogs.exchange'
 ]
 
 ##################################################
