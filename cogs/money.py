@@ -329,13 +329,11 @@ class Money(commands.Cog):
                 await self.dbm.log_command(ctx.user.id, "send", [user, amount], ctx.guild.id if ctx.guild else None, result="Failed (Mistake)")
                 return
 
-            transaction_time = datetime.now(timezone.utc)  # 現在時刻
+            transaction_time = datetime.now()  # 現在時刻 without timezoneにしないとエラー吐く
 
             # 時間変換
             jst = timezone(timedelta(hours=9))
-            formatted_transaction_time = transaction_time.replace(tzinfo=timezone.utc)  # timezone付与
-            formatted_transaction_time = formatted_transaction_time.astimezone(jst)
-            formatted_transaction_time = formatted_transaction_time.strftime("%Y/%m/%d %H:%M:%S")
+            formatted_transaction_time = transaction_time.strftime("%Y/%m/%d %H:%M:%S")
 
             transaction_id = secrets.token_hex(10)
 
