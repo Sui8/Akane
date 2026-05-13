@@ -56,7 +56,7 @@ class System(commands.Cog):
 
     # help
 
-    @app_commands.command(name="help", description="Akaneのコマンド一覧を表示します")
+    @app_commands.command(name="help", description="使用できるコマンドの一覧を表示します")
     @app_commands.describe(command="指定したコマンドの説明を表示します")
     @ephemeral_check
     @restrict_check
@@ -117,7 +117,7 @@ class System(commands.Cog):
 
     # ping
 
-    @app_commands.command(name="ping", description="AkaneのPingを確認します")
+    @app_commands.command(name="ping", description="BotのPingを確認します")
     @ephemeral_check
     @restrict_check
     async def ping(self, ctx: discord.Interaction):

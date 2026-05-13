@@ -5,3 +5,4 @@ run.sh
 .others/
 data/
 postgres_card_input.py
+run_daemon.bat

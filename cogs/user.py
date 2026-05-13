@@ -26,8 +26,7 @@ ALL_BADGES = [["staff", "<:Discord_Staff:1310243625980133416>"],
               ["hypesquad_brilliance", "<:HypeSquad_Brilliance:1310243053612830771>"],
               ["early_supporter", "<:Early_Supporter:1310245165977567232>"],
               ["verified_bot_developer", "<:Early_Verified_Bot_Developer:1310246728120664205>"],
-              ["discord_certified_moderator", "<:Moderator_Programs_Alumni:1310254854886785137>"],
-              ["active_developer", "<:Active_Developer:1310255185276309677>"]
+              ["discord_certified_moderator", "<:Moderator_Programs_Alumni:1310254854886785137>"]
               ]
 
 ##################################################
@@ -60,7 +59,7 @@ class User(commands.Cog):
 
     # user
 
-    @app_commands.command(name="user", description="ユーザー情報を取得するで")
+    @app_commands.command(name="user", description="指定したユーザー情報を取得します")
     @app_commands.checks.cooldown(2, 15)
     @app_commands.describe(user="ユーザーをメンションまたはユーザーIDで指定")
     @ephemeral_check
@@ -159,7 +158,7 @@ class User(commands.Cog):
 
     # unban
 
-    @app_commands.command(name="unban", description="ユーザーのBAN解除をします")
+    @app_commands.command(name="unban", description="ユーザーのBANを解除します")
     @app_commands.checks.cooldown(1, 5)
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(user="メンションまたはユーザーID")
@@ -231,7 +230,7 @@ class User(commands.Cog):
 
     # massban
 
-    @app_commands.command(name="massban", description="ユーザーを一括BANします")
+    @app_commands.command(name="massban", description="複数ユーザーを一括でBANします")
     @app_commands.checks.cooldown(1, 10)
     @app_commands.default_permissions(administrator=True)
     @app_commands.describe(users="スペース/カンマ区切りでメンションまたはユーザーID")
